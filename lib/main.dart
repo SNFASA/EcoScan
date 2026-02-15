@@ -1,121 +1,235 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/gemini_service.dart'; // 1. Import your new Brain 🧠
 
-void main() {
-  runApp(const MyApp());
+late List<CameraDescription> _cameras;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env"); // Load secrets
+  try {
+    _cameras = await availableCameras();
+  } catch (e) {
+    _cameras = [];
+  }
+  runApp(const EcoScanApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class EcoScanApp extends StatelessWidget {
+  const EcoScanApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const CameraScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _CameraScreenState extends State<CameraScreen> {
+  CameraController? controller;
+  bool isCameraInitialized = false;
+  bool isAnalyzing = false;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    if (_cameras.isNotEmpty) {
+      controller = CameraController(_cameras[0], ResolutionPreset.medium);
+      controller!.initialize().then((_) {
+        if (!mounted) return;
+        setState(() {
+          isCameraInitialized = true;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _takePicture() async {
+    if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
+
+    // 1. Lock UI
+    setState(() { isAnalyzing = true; });
+
+    try {
+      final XFile image = await controller!.takePicture();
+      File file = File(image.path);
+
+      // 2. 🧠 CALL THE SERVICE (The Clean Way)
+      final data = await GeminiService.identifyWaste(file);
+
+      // 3. Unlock UI
+      if (!mounted) return;
+      setState(() { isAnalyzing = false; });
+
+      // 4. Show the Smart UI
+      _showSmartResult(data);
+
+    } catch (e) {
+      print(e);
+      if (!mounted) return;
+      setState(() { isAnalyzing = false; });
+    }
+  }
+
+  // 🎨 HELPER: Get Color based on Malaysian Bin Standards
+  Color _getBinColor(String? binColor) {
+    switch (binColor?.toLowerCase()) {
+      case 'blue': return Colors.blue;      // Paper
+      case 'orange': return Colors.orange;  // Plastic/Aluminium
+      case 'brown': return Colors.brown;    // Glass
+      default: return Colors.black87;       // General/Unknown
+    }
+  }
+
+  void _showSmartResult(Map<String, dynamic> data) {
+    final themeColor = _getBinColor(data['binColor']);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(25),
+        width: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle Bar
+            Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            const SizedBox(height: 25),
+
+            // 1. Big Icon
+            Icon(Icons.recycling, size: 60, color: themeColor),
+            const SizedBox(height: 15),
+
+            // 2. Title
+            Text(
+              data['itemName'] ?? 'Unknown Item',
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 15),
+
+            // 3. The "Bin Badge"
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: themeColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: themeColor, width: 2),
+              ),
+              child: Text(
+                "Use ${data['binColor']} Bin",
+                style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // 4. Fun Fact Card
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(Icons.lightbulb, size: 18, color: Colors.amber[700]),
+                    const SizedBox(width: 8),
+                    Text("Did you know?", style: TextStyle(color: Colors.amber[800], fontWeight: FontWeight.bold))
+                  ]),
+                  const SizedBox(height: 5),
+                  Text(data['funFact'] ?? 'Recycling saves energy!', style: const TextStyle(fontSize: 14, height: 1.4)),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // 5. Points & Button
+            Text("+${data['points']} EcoPoints!", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 22)),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Scan Next Item", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    if (_cameras.isEmpty) return const Scaffold(body: Center(child: Text("No Camera Found")));
+    if (!isCameraInitialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: Stack(
+        children: [
+          // Full Screen Camera
+          SizedBox.expand(child: CameraPreview(controller!)),
+
+          // Overlay: Capture Button
+          Positioned(
+            bottom: 40,
+            left: 20,
+            right: 20,
+            child: ElevatedButton.icon(
+              onPressed: isAnalyzing ? null : _takePicture,
+              icon: isAnalyzing
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.camera_alt, size: 28),
+              label: Text(isAnalyzing ? "Analyzing..." : "Identify Waste"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isAnalyzing ? Colors.grey : Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                elevation: 5,
+              ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
