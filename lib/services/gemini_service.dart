@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
+
 
 class GeminiService {
   static Future<Map<String, dynamic>> identifyWaste(File imageFile) async {
@@ -44,7 +46,8 @@ class GeminiService {
         Content.multi([prompt, imagePart])
       ]);
 
-      print("AI Response: ${response.text}"); // Debugging
+      debugPrint('Gemini response: $response');
+ // Debugging
 
       // 5. Parse the result
       if (response.text == null) throw Exception("No response from AI");
@@ -55,7 +58,7 @@ class GeminiService {
       return jsonDecode(cleanJson);
 
     } catch (e) {
-      print("Error in GeminiService: $e");
+      debugPrint('Gemini error: $e');
       // Return a default "Error" object so the app doesn't crash
       return {
         "itemName": "Unknown Item",

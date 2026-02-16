@@ -1,12 +1,25 @@
-import 'dart:io';
+// start app & attach riverpod
+//import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+//import 'package:camera/camera.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/gemini_service.dart'; // 1. Import your new Brain 🧠
+//import 'services/gemini_service.dart'; // 1. Import your new Brain 🧠
 
-late List<CameraDescription> _cameras;
+import 'app/app.dart';
+import 'services/firebase_service.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseService.initialize(); // Initialize Firebase
+  await dotenv.load(fileName: ".env"); // Load secrets
+  runApp(
+    const ProviderScope(
+      child: EcoScanApp(),
+    ),
+  );
+}
 
-Future<void> main() async {
+/**Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env"); // Load secrets
   try {
@@ -234,3 +247,4 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 }
+**/
