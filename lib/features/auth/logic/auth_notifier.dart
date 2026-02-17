@@ -1,4 +1,3 @@
-// all logic goes here, such as sign in, sign up, sign out, etc.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_repository.dart';
@@ -15,20 +14,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await repository.signInWithEmail(email, password);
       state = const AuthState();
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Map the underlying error to a user-facing message.
       state = AuthState(error: _mapErrorToMessage(e));
     }
   }
 
   String _mapErrorToMessage(Object error) {
-    // Add specific error-type handling here as needed.
     if (error is FormatException) {
       return 'The provided credentials are in an invalid format.';
     }
 
-    // Fallback: preserve the original error message for debugging.
     return error.toString();
   }
 }
-
