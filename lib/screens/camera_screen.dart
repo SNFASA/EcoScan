@@ -1,18 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:provider/provider.dart'; // 🔴 Added this
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod
 import '../services/gemini_service.dart';
-import '../services/points_service.dart'; // 🔴 Added this
+import '../services/points_service.dart';
 
-class CameraScreen extends StatefulWidget {
+class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
 
   @override
-  State<CameraScreen> createState() => _CameraScreenState();
+  ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> {
+class _CameraScreenState extends ConsumerState<CameraScreen> {
   CameraController? controller;
   List<CameraDescription>? _cameras;
   bool isCameraInitialized = false;
@@ -36,7 +36,7 @@ class _CameraScreenState extends State<CameraScreen> {
         });
       }
     } catch (e) {
-      print("Camera Error: $e");
+      debugPrint("Camera Error: $e");
     }
   }
 
@@ -47,77 +47,77 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _takePicture() async {
-    // 1. Basic Safety Checks
     if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
 
     setState(() { isAnalyzing = true; });
 
     try {
-      // 2. Capture the image
       final XFile image = await controller!.takePicture();
       File file = File(image.path);
 
-      // 3. 🧠 CALL THE AI SERVICE
+      // 🧠 AI Analysis
       final data = await GeminiService.identifyWaste(file);
 
       if (!mounted) return;
 
-      // 4. Update the Global Points State 🏆
+      // 🏆 RIVERPOD UPDATE:
+      // We use .notifier to access the functions (addPoints)
       final pointsEarned = data['points'] ?? 0;
-      Provider.of<PointsService>(context, listen: false).addPoints(pointsEarned);
+      ref.read(pointsServiceProvider.notifier).addPoints(pointsEarned);
 
       setState(() { isAnalyzing = false; });
-
-      // 5. Show the Results Popup
       _showSmartResult(data);
 
     } catch (e) {
-      print("Error in scan process: $e");
+      debugPrint("Error: $e");
       if (!mounted) return;
       setState(() { isAnalyzing = false; });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
     }
   }
 
-  // ... (Keep the _getBinColor and _showSmartResult functions exactly as they were) ...
+  // --- UI LOGIC ---
+
   Color _getBinColor(String? binColor) {
     switch (binColor?.toLowerCase()) {
       case 'blue': return Colors.blue;
       case 'orange': return Colors.orange;
       case 'brown': return Colors.brown;
-      default: return Colors.black87;
+      case 'black': return Colors.grey[800]!;
+      default: return Colors.green;
     }
   }
 
   void _showSmartResult(Map<String, dynamic> data) {
     final themeColor = _getBinColor(data['binColor']);
+    final funFact = data['funFact'] ?? "Recycling saves energy!";
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (context) => Container(
         padding: const EdgeInsets.all(25),
         width: double.infinity,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle Bar
             Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             const SizedBox(height: 25),
+
+            // Icon
             Icon(Icons.recycling, size: 60, color: themeColor),
             const SizedBox(height: 15),
-            Text(
-              data['itemName'] ?? 'Unknown Item',
+
+            // Item Name
+            Text(data['itemName'] ?? 'Unknown Item',
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 15),
+
+            // Bin Tag
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -130,26 +130,27 @@ class _CameraScreenState extends State<CameraScreen> {
                 style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
+
+            // Fun Fact
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(15)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(children: [
-                    Icon(Icons.lightbulb, size: 18, color: Colors.amber[700]),
-                    const SizedBox(width: 8),
-                    Text("Did you know?", style: TextStyle(color: Colors.amber[800], fontWeight: FontWeight.bold))
-                  ]),
-                  const SizedBox(height: 5),
-                  Text(data['funFact'] ?? 'Recycling saves energy!', style: const TextStyle(fontSize: 14, height: 1.4)),
+                  const Icon(Icons.lightbulb, color: Colors.amber),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(funFact, style: TextStyle(color: Colors.grey[800], fontStyle: FontStyle.italic))),
                 ],
               ),
             ),
             const SizedBox(height: 25),
+
+            // Points
             Text("+${data['points']} EcoPoints!", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 22)),
             const SizedBox(height: 20),
+
+            // Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -174,11 +175,11 @@ class _CameraScreenState extends State<CameraScreen> {
     if (!isCameraInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
     return Scaffold(
       body: Stack(
         children: [
           SizedBox.expand(child: CameraPreview(controller!)),
+          // Overlay UI
           Positioned(
             bottom: 40,
             left: 20,
@@ -196,6 +197,24 @@ class _CameraScreenState extends State<CameraScreen> {
                 textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 elevation: 5,
+              ),
+            ),
+          ),
+          // Back Button (Top Left)
+          Positioned(
+            top: 50,
+            left: 20,
+            child: CircleAvatar(
+              backgroundColor: Colors.black45,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  // Switch back to Home Tab (Index 0)
+                  // Since we are using IndexedStack in main.dart, we can't easily switch tabs from here
+                  // without a GlobalKey or passing a callback.
+                  // For now, this just acts as a dummy close if you pushed this screen.
+                  // But in your tab setup, you just click the bottom nav.
+                },
               ),
             ),
           ),

@@ -1,28 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod!
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-// Ensure these paths match your project folder structure
 import 'screens/home_screen.dart';
 import 'screens/scoreboard_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/camera_screen.dart';
-import 'services/points_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Try-catch added for safety if .env is missing during debug
   try {
+    // Initialize Firebase using the generated options
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Load environment variables
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("Warning: .env file not found");
+    print("⚠️ Initialization Error: $e");
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => PointsService(),
-      child: const EcoScanApp(),
+    // The "Brain" of Riverpod. It replaces MultiProvider.
+    const ProviderScope(
+      child: EcoScanApp(),
     ),
   );
 }
@@ -57,7 +61,6 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _selectedIndex = 0;
 
-  // List of pages to display in the stack
   final List<Widget> _pages = [
     const HomeScreen(),
     const ScoreboardScreen(),
@@ -74,7 +77,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack preserves the state of each page when switching tabs
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,

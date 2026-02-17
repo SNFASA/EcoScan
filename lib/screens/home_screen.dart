@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod
 import '../services/points_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // 1. Listen to the PointsService for live updates
-    final pointsProvider = Provider.of<PointsService>(context);
-    final int points = pointsProvider.totalPoints;
-    final int scans = pointsProvider.totalScans;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. WATCH THE STATE (Not the service)
+    // "ref.watch" gives us the current 'PointsState' object containing the numbers.
+    final pointsState = ref.watch(pointsServiceProvider);
+
+    // 2. Extract the numbers from the state
+    final int points = pointsState.totalPoints;
+    final int scans = pointsState.totalScans;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -36,7 +39,7 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          "Hello, Shaamalan! 👋",
+                          "Hello, Eco Hero! 👋",
                           style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
                       ),
                       SizedBox(height: 5),
@@ -56,7 +59,6 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 2. Pass real data to the Stat Card
                   _buildStatCard(points, scans),
                   const SizedBox(height: 25),
                   const Text("Daily Goal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -74,6 +76,8 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  // --- WIDGET HELPERS (UI Logic) ---
 
   Widget _buildStatCard(int points, int scans) {
     return Container(
@@ -108,9 +112,9 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildGoalCard(int currentScans) {
-    // Logic: Goal is 5 scans. If user has 45 total, let's just show progress toward a local milestone.
     double progress = (currentScans % 5) / 5.0;
     if (progress == 0 && currentScans > 0) progress = 1.0;
+    if (progress > 1.0) progress = 1.0;
 
     return Container(
       padding: const EdgeInsets.all(20),
