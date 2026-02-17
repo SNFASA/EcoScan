@@ -1,35 +1,42 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// 1. THE STATE (Holds your numbers safely)
+/// 1️⃣ THE STATE (holds points and scans)
 class PointsState {
   final int totalPoints;
   final int totalScans;
 
-  // Constructor with default values
-  PointsState({this.totalPoints = 1240, this.totalScans = 45});
+  const PointsState({this.totalPoints = 0, this.totalScans = 0});
+
+  // Optional: copyWith helper for cleaner updates
+  PointsState copyWith({int? totalPoints, int? totalScans}) {
+    return PointsState(
+      totalPoints: totalPoints ?? this.totalPoints,
+      totalScans: totalScans ?? this.totalScans,
+    );
+  }
 }
 
-// 2. THE NOTIFIER (Handles the logic)
+/// 2️⃣ THE NOTIFIER (handles logic)
 class PointsService extends Notifier<PointsState> {
   @override
   PointsState build() {
-    // Initialize the state when the app starts
-    return PointsState();
+    // Initial state
+    return const PointsState(totalPoints: 1240, totalScans: 45);
   }
 
   void addPoints(int points) {
-    // In modern Riverpod, we don't 'notify listeners'.
-    // Instead, we create a new state, and the UI updates automatically.
-    state = PointsState(
+    // Update state immutably
+    state = state.copyWith(
       totalPoints: state.totalPoints + points,
       totalScans: state.totalScans + 1,
     );
   }
 
   void resetStats() {
-    state = PointsState(totalPoints: 0, totalScans: 0);
+    state = const PointsState(totalPoints: 0, totalScans: 0);
   }
 }
 
-// 3. THE PROVIDER (Exposes the logic to the app)
-final pointsServiceProvider = NotifierProvider<PointsService, PointsState>(PointsService.new);
+/// 3️⃣ THE PROVIDER (exposes the Notifier)
+final pointsServiceProvider =
+    NotifierProvider<PointsService, PointsState>(PointsService.new);

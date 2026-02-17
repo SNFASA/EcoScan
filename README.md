@@ -50,3 +50,123 @@ EcoScan introduces a **“Snap & Sort”** experience:
   "bin": "recycling",
   "confidence": 0.98
 }
+```
+
+---
+
+##  🚀 Installation & Setup
+### Prerequisite
+### Make sure you have the following installed:
+- Flutter SDK
+- Git
+- A code editor (VS Code recommended)
+- Android Emulator or physical device
+
+### Clone the Repository
+```
+git clone https://github.com/SNFASA/EcoScan.git
+cd EcoScan
+ ````
+
+### Install Dependencies
+```
+git clone https://github.com/SNFASA/EcoScan.git
+cd EcoScan
+ ````
+
+### Run the App
+```
+flutter run
+ ````
+
+---
+
+## 🔐 Environment Configuration (Optional)
+
+ Some features (AI scanning, leaderboard) may require environment variables.
+ Create a .env file (if required) and do not commit it:
+
+```
+API_KEY=your_api_key_here
+```
+
+---
+
+## 🧑‍💻 Contribution Guide (Issue → Pull Request Flow)
+
+ We follow an issue-based development workflow to keep collaboration clean and organized.
+
+### 1️⃣ Pick or Create an Issue
+
+- Go to the **Issues** tab  
+- Choose an issue from the **Backlog / Ready**  
+- Assign the issue to yourself  
+
+### 2️⃣ Create a Feature Branch
+
+Branch naming convention:
+```
+feature/<issue-number>-short-description
+```
+
+Example:
+```
+git checkout -b feature/12-camera-ui
+```
+
+### 3️⃣ Work on the Issue
+
+- Make small, focused commits
+- Follow the project structure
+- Test before pushing  
+
+```
+git add .
+git commit -m "Add camera UI for scanning"
+```
+
+### 4️⃣ Push Your Branch
+
+```
+git push origin feature/12-camera-ui
+```
+
+### 5️⃣ Open a Pull Request (PR)
+
+- Open a PR targeting the develop branch
+- Link the issue using:
+
+```
+Closes #12
+```
+## ✅ PR Checklist
+
+- [ ] Code follows project structure
+- [ ] Feature matches issue description
+- [ ] No unnecessary files committed
+- [ ] App runs without errors
+
+## 6️⃣ Review & Merge
+
+- Admin reviews the PR
+- Requested changes (if any) are applied
+- PR is merged into **develop**
+- Completed issues are moved to **Done**
+
+## 🌳 Branch Rules
+
+- ❌ No direct commits to `main`
+- ✅ All changes via Pull Requests
+- ✅ Admin approval required before merge
+
+---
+
+## 🏁 Development Workflow Summary
+
+```
+Issue → Branch → Code → Pull Request → Review → Merge
+```
+### This keeps the project:
+- Organized
+- Easy to review
+- Professional for hackathon judges

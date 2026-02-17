@@ -1,72 +1,76 @@
+import 'dart:convert';
 import 'dart:io';
-import 'dart:convert'; // Required for jsonDecode
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
   static Future<Map<String, dynamic>> identifyWaste(File imageFile) async {
-    // 1. Get the API Key safely
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? "";
-
+    // Get API key securely
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     if (apiKey.isEmpty) {
-      print("⚠️ ERROR: Gemini API Key is missing in .env file");
-      return _fallbackResponse("API Key Missing");
+      throw Exception('API key not found in .env file');
     }
 
+    // Configure Gemini model with enforced JSON response
+    final model = GenerativeModel(
+      model: 'gemini-1.5-flash-latest',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+      ),
+    );
+
+    // Prompt tuned for waste classification (Malaysia context)
+    final prompt = TextPart("""
+Analyze this image and identify the waste item.
+Return a RAW JSON object with these exact fields:
+{
+  "itemName": "Short name (e.g. Plastic Bottle)",
+  "category": "Plastic, Paper, Glass, Metal, Food, or General",
+  "binColor": "Blue (Paper), Orange (Plastic/Metal), Brown (Glass), or Black (General)",
+  "isRecyclable": true or false,
+  "points": 10 if recyclable, 2 if not,
+  "funFact": "One short interesting fact about recycling this item."
+}
+Do not use Markdown. Return only the JSON.
+""");
+
     try {
-      // 2. Initialize the AI Model
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash', // Fast and cheap model
-        apiKey: apiKey,
-      );
-
-      // 3. Create the Prompt
-      final prompt = TextPart("""
-        Analyze this image of waste/recycling.
-        Return ONLY a valid JSON object. Do not use Markdown formatting (no ```json).
-        
-        Fields required:
-        - itemName: A short, clear name (e.g., 'Plastic Water Bottle', 'Banana Peel').
-        - binColor: Choose strictly from: 'Blue' (Paper), 'Orange' (Plastic/Aluminium), 'Brown' (Glass), or 'Black' (General/Food).
-        - funFact: A short, interesting fact about recycling this specific item (max 1 sentence).
-        - points: Integer value (10 for recyclable items, 1 for non-recyclable/general waste).
-      """);
-
-      // 4. Convert Image to Bytes for the API
       final imageBytes = await imageFile.readAsBytes();
       final imagePart = DataPart('image/jpeg', imageBytes);
 
-      // 5. Send to Gemini 🚀
       final response = await model.generateContent([
-        Content.multi([prompt, imagePart])
+        Content.multi([prompt, imagePart]),
       ]);
 
-      String? text = response.text;
+      debugPrint('Gemini response: $response');
 
-      if (text != null && text.isNotEmpty) {
-        // CLEANUP: Remove any markdown formatting the AI might add
-        final cleanJson = text.replaceAll('```json', '').replaceAll('```', '').trim();
-
-        // PARSE: Convert string to Map
-        return jsonDecode(cleanJson);
+      if (response.text == null || response.text!.isEmpty) {
+        throw Exception('No response text from Gemini');
       }
 
-    } catch (e) {
-      print("❌ AI Processing Error: $e");
+      // Clean up in case Gemini wraps JSON in ```json fences
+      final cleanJson = response.text!
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      return jsonDecode(cleanJson) as Map<String, dynamic>;
+    } catch (e, stackTrace) {
+      debugPrint('Gemini error: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // Safe fallback so the app never crashes
+      return {
+        "itemName": "Unknown Item",
+        "category": "General",
+        "binColor": "Black",
+        "isRecyclable": false,
+        "points": 0,
+        "funFact": "Could not identify the item. Please try again.",
+      };
     }
-
-    // 6. If anything fails, return this safe fallback
-    return _fallbackResponse("Could not identify item");
-  }
-
-  // Helper method for error cases
-  static Map<String, dynamic> _fallbackResponse(String reason) {
-    return {
-      'itemName': 'Unknown Item',
-      'binColor': 'Black',
-      'funFact': 'We couldn\'t identify this item. Try scanning again!',
-      'points': 0,
-      'error': reason
-    };
   }
 }
