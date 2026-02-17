@@ -33,7 +33,7 @@ dependencies:
 
   flutter_dotenv: ^5.2.1
   # State management
-  flutter_riverpod: ^2.5.1
+  flutter_riverpod: ^3.2.1
 
   # Firebase core
   firebase_core: ^2.27.0
