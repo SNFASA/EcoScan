@@ -14,32 +14,75 @@ class LoginScreen extends ConsumerWidget {
     return Scaffold(
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (authState.isLoading)
-              const CircularProgressIndicator(),
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
 
-            if (authState.error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                authState.error.toString(),
-                style: const TextStyle(
-                  color: Colors.red,
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
                 ),
-                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (authState.isLoading)
+                const CircularProgressIndicator(),
+              if (!authState.isLoading) ...[
+                PrimaryButton(
+                  text: 'Login',
+                  onPressed: () {
+                    final email = _emailController.text;
+                    final password = _passwordController.text;
+                    ref
+                        .read(authProvider.notifier)
+                        .login(email, password);
+                  },
+                ),
+              ],
             ],
-            const SizedBox(height: 20),
-
-            PrimaryButton(
-              text: 'Login',
-              onPressed: () {
-                ref
-                    .read(authProvider.notifier)
-                    .login('test@mail.com', '123456');
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
