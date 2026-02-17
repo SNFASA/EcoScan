@@ -10,7 +10,24 @@ import 'services/firebase_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseService.initialize(); // Initialize Firebase
+  try {
+    await FirebaseService.initialize(); // Initialize Firebase
+  } catch (e, stackTrace) {
+    debugPrint('Failed to initialize Firebase: $e');
+    debugPrint('Stack trace: $stackTrace');
+    runApp(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text(
+              'Failed to initialize the app. Please restart or try again later.',
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
   await dotenv.load(fileName: ".env"); // Load secrets
   runApp(
     const ProviderScope(
