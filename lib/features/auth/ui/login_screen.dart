@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logic/auth_provider.dart';
-import '../logic/auth_state.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../home/ui/home_screen.dart';
 
