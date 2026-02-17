@@ -9,7 +9,7 @@ class HomeScreen extends StatelessWidget {
       body: Center(
         child: Text(
           "Welcome to EcoScan 🌱",
-          style: TextStyle(fontSize: 24),
+          style: const TextStyle(fontSize: 24),
         ),
       ),
     );
