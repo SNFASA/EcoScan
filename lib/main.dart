@@ -1,103 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
-import 'services/points_service.dart';
-import 'screens/home_screen.dart';
-import 'screens/scoreboard_screen.dart';
-import 'screens/analytics_screen.dart';
-import 'screens/camera_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'app/app.dart';
+import 'services/firebase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load the .env file (make sure you created this file in the root!)
-  await dotenv.load(fileName: ".env");
+
+  try {
+    await FirebaseService.initialize(); // Initialize Firebase
+    await dotenv.load(fileName: ".env"); // Load secrets
+  } catch (e, stackTrace) {
+    debugPrint('Failed to initialize app: $e');
+    debugPrint('Stack trace: $stackTrace');
+
+    runApp(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text(
+              'Failed to initialize the app. Please restart or try again later.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => PointsService(),
-      child: const EcoScanApp(),
+    const ProviderScope(
+      child: EcoScanApp(),
     ),
   );
-}
-
-class EcoScanApp extends StatelessWidget {
-  const EcoScanApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'EcoScan',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          primary: Colors.green[700]!,
-        ),
-        useMaterial3: true,
-      ),
-      home: const MainNavigationShell(),
-    );
-  }
-}
-
-class MainNavigationShell extends StatefulWidget {
-  const MainNavigationShell({super.key});
-
-  @override
-  State<MainNavigationShell> createState() => _MainNavigationShellState();
-}
-
-class _MainNavigationShellState extends State<MainNavigationShell> {
-  int _selectedIndex = 0;
-
-  // The 4 screens of your app
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const ScoreboardScreen(),
-    const CameraScreen(),
-    const AnalyticsScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // IndexedStack keeps the state of pages alive (camera won't close when you switch tabs)
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.leaderboard_outlined),
-            selectedIcon: Icon(Icons.leaderboard),
-            label: 'Ranks',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.camera_enhance_outlined),
-            selectedIcon: Icon(Icons.camera_enhance),
-            label: 'Scan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Impact',
-          ),
-        ],
-      ),
-    );
-  }
 }
