@@ -1,22 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'auth_provider.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepository repository;
+class AuthNotifier extends Notifier<AuthState> {
+  late final AuthRepository repository;
 
-  AuthNotifier(this.repository) : super(const AuthState());
+  @override
+  AuthState build() {
+    repository = ref.read(authRepositoryProvider);
+    return const AuthState();
+  }
 
   Future<void> login(String email, String password) async {
-    state = const AuthState(isLoading: true);
+    state = state.copyWith(isLoading: true, error: null);
 
     try {
       await repository.signInWithEmail(email, password);
       state = const AuthState();
     } catch (e) {
-      // Map the underlying error to a user-facing message.
-      state = AuthState(error: _mapErrorToMessage(e));
+      state = state.copyWith(
+        isLoading: false,
+        error: _mapErrorToMessage(e),
+      );
     }
   }
 
@@ -24,7 +30,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (error is FormatException) {
       return 'The provided credentials are in an invalid format.';
     }
-
     return error.toString();
   }
 }
