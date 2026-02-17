@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 
 void main() {
   runApp(const MyApp());
 }
+=======
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'screens/home_screen.dart';
+import 'screens/scoreboard_screen.dart';
+import 'screens/analytics_screen.dart';
+import 'screens/camera_screen.dart';
+import 'services/points_service.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => PointsService(),
+      child: const EcoScanApp(),
+    ), // <--- Added closing bracket for Provider
+  ); // <--- Added closing parenthesis and semicolon for runApp
+} // <--- Added closing brace for main function
+>>>>>>> Stashed changes
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,6 +35,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
+<<<<<<< Updated upstream
         // This is the theme of your application.
         //
         // TRY THIS: Try running your application with "flutter run". You'll see
@@ -31,10 +54,17 @@ class MyApp extends StatelessWidget {
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
+=======
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green, primary: Colors.green[700]!),
+        useMaterial3: true,
+      ),
+      home: const MainNavigationShell(),
+>>>>>>> Stashed changes
     );
   }
 }
 
+<<<<<<< Updated upstream
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
@@ -64,11 +94,35 @@ class _MyHomePageState extends State<MyHomePage> {
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
       _counter++;
+=======
+class MainNavigationShell extends StatefulWidget {
+  const MainNavigationShell({super.key});
+
+  @override
+  State<MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends State<MainNavigationShell> {
+  int _selectedIndex = 0;
+
+  // List of pages
+  final List<Widget> _pages = [
+    const HomeScreen(),
+    const ScoreboardScreen(),
+    const CameraScreen(),
+    const AnalyticsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+>>>>>>> Stashed changes
     });
   }
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< Updated upstream
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -116,6 +170,22 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: _incrementCounter,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
+=======
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.leaderboard_outlined), selectedIcon: Icon(Icons.leaderboard), label: 'Ranks'),
+          NavigationDestination(icon: Icon(Icons.camera_enhance_outlined), selectedIcon: Icon(Icons.camera_enhance), label: 'Scan'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Impact'),
+        ],
+>>>>>>> Stashed changes
       ),
     );
   }
