@@ -21,17 +21,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
-
-    // Listen for auth state changes to handle navigation
-    ref.listen(authProvider, (previous, next) {
-      final wasLoading = previous?.isLoading ?? false;
-
-      if (wasLoading && !next.isLoading && next.error == null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    });
   }
 
   @override
@@ -44,6 +33,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
+    // ✅ Riverpod 3.x – ref.listen mesti dalam build()
+    ref.listen(authProvider, (previous, next) {
+      final wasLoading = previous?.isLoading ?? false;
+
+      if (wasLoading && !next.isLoading && next.error == null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const HomeScreen(),
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       body: Center(
@@ -69,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 🔴 Error display
+              /// 🔴 Error display
               if (authState.error != null) ...[
                 Text(
                   authState.error!,
@@ -91,7 +93,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     if (email.isEmpty || password.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Please enter email and password'),
+                          content:
+                              Text('Please enter email and password'),
                         ),
                       );
                       return;
