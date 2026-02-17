@@ -47,7 +47,6 @@ class GeminiService {
       ]);
 
       debugPrint('Gemini response: $response');
- // Debugging
 
       // 5. Parse the result
       if (response.text == null) throw Exception("No response from AI");
