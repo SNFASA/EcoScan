@@ -19,6 +19,16 @@ class LoginScreen extends ConsumerWidget {
             if (authState.isLoading)
               const CircularProgressIndicator(),
 
+            if (authState.error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                authState.error.toString(),
+                style: const TextStyle(
+                  color: Colors.red,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 20),
 
             PrimaryButton(
