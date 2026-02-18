@@ -1,0 +1,3 @@
+*.swift text eol=lf
+*.cc text eol=lf
+*.cmake text eol=lf

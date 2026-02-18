@@ -1,20 +1,25 @@
-// only talks to firebase auth, abstracts away the details from the rest of the app
-// UI never touches firebase directly, makes it easier to switch auth providers if needed
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthRepository {
-  final FirebaseAuth _auth;
+  final FirebaseAuth auth;
 
-  AuthRepository({required FirebaseAuth auth}) : _auth = auth;
-  Future<void> signInWithEmail(
-      String email, String password) async {
-    await _auth.signInWithEmailAndPassword(
+  AuthRepository({required this.auth});
+
+  Future<void> login(String email, String password) async {
+    await auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
   }
 
-  Future<void> signOut() async {
-    await _auth.signOut();
+  Future<void> register(String email, String password) async {
+    await auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
+  Future<void> logout() async {
+    await auth.signOut();
   }
 }
