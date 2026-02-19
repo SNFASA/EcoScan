@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-// Screens
+// 1. Import your screens
 import 'scoreboard_screen.dart';
 import 'camera_screen.dart';
 import 'analytics_screen.dart';
-import 'profiles_screen.dart';
 
-// Controller
-import '../controllers/user_controller.dart';
-import 'package:ecoscan/features/auth/logic/auth_provider.dart'; // Make sure authProvider is imported
+// 2. Import Service
+import '../../../../services/points_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,38 +19,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
-  void _onItemTapped(int index) async {
-    // Logout index = 5
-    if (index == 5) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Logout'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true) {
-        await ref.read(authProvider.notifier).logout();
-
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
-      }
-      return;
-    }
-
+  void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -61,36 +27,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
+    // 3. Define the pages (Pass the callback to Dashboard)
+    final List<Widget> pages = [
       DashboardTab(onSwitchTab: _onItemTapped),
       const ScoreboardScreen(),
       const CameraScreen(),
       const AnalyticsScreen(),
-      const ProfileScreen(),
     ];
 
+    // 4. Check Screen Width
     final width = MediaQuery.of(context).size.width;
-    final isDesktop = width >= 800;
+    final isDesktop = width >= 800; // Breakpoint for Desktop/Tablet
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
+      // 5. RESPONSIVE NAVIGATION LOGIC
       bottomNavigationBar: isDesktop
-          ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _onItemTapped,
-              backgroundColor: Colors.white,
-              indicatorColor: Colors.green.withAlpha(51), // ~0.2 opacity
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-                NavigationDestination(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
-                NavigationDestination(icon: Icon(Icons.camera_enhance_rounded), label: 'Scan'),
-                NavigationDestination(icon: Icon(Icons.insights_rounded), label: 'Impact'),
-                NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
-              ],
-            ),
+          ? null // No bottom bar on desktop
+          : Container(
+        decoration: BoxDecoration(boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5))
+        ]),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          backgroundColor: Colors.white,
+          indicatorColor: Colors.green.withOpacity(0.2),
+          elevation: 0,
+          destinations: _buildDestinations(),
+        ),
+      ),
       body: Row(
         children: [
+          // 6. ADD SIDE RAIL FOR DESKTOP
           if (isDesktop)
             NavigationRail(
               selectedIndex: _selectedIndex,
@@ -98,7 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               labelType: NavigationRailLabelType.all,
               backgroundColor: Colors.white,
               selectedIconTheme: const IconThemeData(color: Colors.green),
-              indicatorColor: Colors.green.withAlpha(25), // ~0.1 opacity
+              indicatorColor: Colors.green.withOpacity(0.1),
               leading: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 30),
                 child: Icon(Icons.eco, color: Colors.green, size: 40),
@@ -108,10 +77,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 NavigationRailDestination(icon: Icon(Icons.emoji_events_rounded), label: Text('Ranks')),
                 NavigationRailDestination(icon: Icon(Icons.camera_enhance_rounded), label: Text('Scan')),
                 NavigationRailDestination(icon: Icon(Icons.insights_rounded), label: Text('Impact')),
-                NavigationRailDestination(icon: Icon(Icons.person_rounded), label: Text('Profile')),
               ],
             ),
-          if (isDesktop) const VerticalDivider(width: 1),
+
+          if (isDesktop) const VerticalDivider(thickness: 1, width: 1),
+
+          // 7. EXPANDED CONTENT
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
@@ -122,7 +93,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+
+  // Helper for Bottom Nav Destinations
+  List<NavigationDestination> _buildDestinations() {
+    return const [
+      NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+      NavigationDestination(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
+      NavigationDestination(icon: Icon(Icons.camera_enhance_rounded), label: 'Scan'),
+      NavigationDestination(icon: Icon(Icons.insights_rounded), label: 'Impact'),
+    ];
+  }
 }
+
+// ==============================================================================
+// 🌿 THE RESPONSIVE DASHBOARD TAB
+// ==============================================================================
 
 class DashboardTab extends ConsumerWidget {
   final Function(int) onSwitchTab;
@@ -131,64 +116,62 @@ class DashboardTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final userAsync = ref.watch(userControllerProvider(uid));
+    final pointsState = ref.watch(pointsServiceProvider);
 
+    // Calculate Layout Constraints
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 800;
 
-    return userAsync.when(
-      data: (user) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF4F9F5),
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildHeaderSection(
-                      user.ecoPoints,
-                      user.totalScans,
-                      width,
-                      user.rankTier,
-                    ),
-                    const SizedBox(height: 80),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 15),
-                          _buildActionGrid(context, isDesktop),
-                          const SizedBox(height: 25),
-                          if (isDesktop)
-                            Row(
-                              children: [
-                                Expanded(child: _buildSection("Daily Impact", _buildDailyGoalCard(user.totalScans))),
-                                const SizedBox(width: 25),
-                                Expanded(child: _buildSection("Did You Know?", _buildTipCard())),
-                              ],
-                            )
-                          else ...[
-                            _buildSection("Daily Impact", _buildDailyGoalCard(user.totalScans)),
-                            const SizedBox(height: 25),
-                            _buildSection("Did You Know?", _buildTipCard()),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F9F5),
+      body: Center(
+        child: ConstrainedBox(
+          // 8. PREVENT STRETCHING ON LARGE SCREENS
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildHeaderSection(pointsState.totalPoints, pointsState.totalScans, width),
+
+                const SizedBox(height: 80),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Responsive Quick Actions
+                      const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 15),
+                      _buildActionGrid(context, isDesktop),
+
+                      const SizedBox(height: 25),
+
+                      // Responsive Layout for Goal & Tip (Side-by-side on Desktop)
+                      if (isDesktop)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildSection("Daily Impact", _buildDailyGoalCard(pointsState.totalScans))),
+                            const SizedBox(width: 25),
+                            Expanded(child: _buildSection("Did You Know?", _buildTipCard())),
                           ],
-                          const SizedBox(height: 100),
-                        ],
-                      ),
-                    ),
-                  ],
+                        )
+                      else ...[
+                        _buildSection("Daily Impact", _buildDailyGoalCard(pointsState.totalScans)),
+                        const SizedBox(height: 25),
+                        _buildSection("Did You Know?", _buildTipCard()),
+                      ],
+
+                      const SizedBox(height: 100),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text("Error: $e"))),
+        ),
+      ),
     );
   }
 
@@ -196,7 +179,7 @@ class DashboardTab extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
         const SizedBox(height: 15),
         content,
       ],
@@ -204,7 +187,8 @@ class DashboardTab extends ConsumerWidget {
   }
 
   // --- WIDGET BUILDERS ---
-  Widget _buildHeaderSection(int points, int scans, double screenWidth, String rank) {
+
+  Widget _buildHeaderSection(int points, int scans, double screenWidth) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
@@ -226,8 +210,8 @@ class DashboardTab extends ConsumerWidget {
           ),
           child: Stack(
             children: [
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withAlpha(25))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withAlpha(13))),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 800),
@@ -257,13 +241,13 @@ class DashboardTab extends ConsumerWidget {
         Positioned(
           bottom: -50,
           child: Container(
-            width: screenWidth > 600 ? 500 : 340,
+            width: screenWidth > 600 ? 500 : 340, // Wider card on Desktop
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
-                BoxShadow(color: Colors.green.withAlpha(51), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
               ],
             ),
             child: Row(
@@ -273,7 +257,7 @@ class DashboardTab extends ConsumerWidget {
                 Container(width: 1, height: 40, color: Colors.grey[200]),
                 _statItem(scans.toString(), "Items", Icons.recycling_rounded, Colors.green),
                 Container(width: 1, height: 40, color: Colors.grey[200]),
-                _statItem(rank, "Rank", Icons.emoji_events_rounded, Colors.orange),
+                _statItem("Gold", "Rank", Icons.emoji_events_rounded, Colors.orange),
               ],
             ),
           ),
@@ -302,9 +286,12 @@ class DashboardTab extends ConsumerWidget {
   }
 
   Widget _buildActionGrid(BuildContext context, bool isDesktop) {
+    // On Desktop, make buttons slightly smaller/cleaner or keep same size
     return Row(
       children: [
-        Expanded(child: _actionButton(Icons.qr_code_scanner, "Scan Now", Colors.blue, () => onSwitchTab(2))),
+        Expanded(child: _actionButton(Icons.qr_code_scanner, "Scan Now", Colors.blue, () {
+          onSwitchTab(2);
+        })),
         const SizedBox(width: 15),
         Expanded(child: _actionButton(Icons.history_rounded, "History", Colors.orange, () {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("History coming soon!")));
@@ -328,14 +315,14 @@ class DashboardTab extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.withAlpha(25)),
-            boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 4))],
+            border: Border.all(color: Colors.grey.withOpacity(0.1)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: color.withAlpha(25), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(height: 10),
@@ -357,7 +344,7 @@ class DashboardTab extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [Colors.green[50]!, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.green.withAlpha(25)),
+        border: Border.all(color: Colors.green.withOpacity(0.1)),
       ),
       child: Row(
         children: [
@@ -367,7 +354,7 @@ class DashboardTab extends ConsumerWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CircularProgressIndicator(value: progress, backgroundColor: Colors.green.withAlpha(51), color: Colors.green, strokeWidth: 6),
+                CircularProgressIndicator(value: progress, backgroundColor: Colors.green.withOpacity(0.2), color: Colors.green, strokeWidth: 6),
                 Text("${(progress * 100).toInt()}%", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
               ],
             ),

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../home/ui/home_screen.dart';
-import '../logic/auth_provider.dart';
 import 'register_screen.dart';
-
+// Check your import paths
+import '../logic/auth_provider.dart';
+import '../../home/ui/home_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -33,37 +32,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-Future<void> _handleLogin() async {
-  if (!_formKey.currentState!.validate()) return;
-
-  final email = _emailController.text.trim();
-  final password = _passwordController.text.trim();
-  FocusScope.of(context).unfocus();
-
-  try {
-    await ref.read(authProvider.notifier).login(email, password);
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(e.toString()),
-        backgroundColor: Colors.red,
-      ),
-    );
+  void _handleLogin() {
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      FocusScope.of(context).unfocus();
+      ref.read(authProvider.notifier).login(email, password);
+    }
   }
-}
-
-
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
+    ref.listen(authProvider, (previous, next) {
+      if (next.isLoading == false && next.error == null && previous?.isLoading == true) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+      if (next.error != null && !next.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
@@ -74,6 +71,7 @@ Future<void> _handleLogin() async {
             child: Column(
               children: [
                 _buildHeaderSection(),
+
                 Transform.translate(
                   offset: const Offset(0, -40),
                   child: Padding(
@@ -83,11 +81,7 @@ Future<void> _handleLogin() async {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10)),
                         ],
                       ),
                       child: Padding(
@@ -96,7 +90,6 @@ Future<void> _handleLogin() async {
                           key: _formKey,
                           child: Column(
                             children: [
-                              // Email field
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
@@ -108,16 +101,13 @@ Future<void> _handleLogin() async {
                                 },
                               ),
                               const SizedBox(height: 20),
-                              // Password field
+
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: !_isPasswordVisible,
                                 decoration: _inputDecoration("Password", Icons.lock_outline).copyWith(
                                   suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                                      color: Colors.grey,
-                                    ),
+                                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
                                     onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                                   ),
                                 ),
@@ -127,19 +117,16 @@ Future<void> _handleLogin() async {
                                   return null;
                                 },
                               ),
-                              // Forgot password
+
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
                                   onPressed: () {},
-                                  child: Text(
-                                    "Forgot Password?",
-                                    style: TextStyle(color: Colors.green[700]),
-                                  ),
+                                  child: Text("Forgot Password?", style: TextStyle(color: Colors.green[700])),
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              // Login button
+
                               SizedBox(
                                 width: double.infinity,
                                 height: 55,
@@ -153,11 +140,7 @@ Future<void> _handleLogin() async {
                                   ),
                                   child: authState.isLoading
                                       ? const CircularProgressIndicator(color: Colors.white)
-                                      : const Text(
-                                          "LOGIN",
-                                          style: TextStyle(
-                                              fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-                                        ),
+                                      : const Text("LOGIN", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                                 ),
                               ),
                             ],
@@ -167,21 +150,20 @@ Future<void> _handleLogin() async {
                     ),
                   ),
                 ),
-                // Sign up link
+
+                // 🔗 SIGN UP LINK - UPDATED
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
                     TextButton(
                       onPressed: () {
+                        // ✅ Navigates to the Register page
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const RegisterScreen()),
                         );
                       },
-                      child: const Text(
-                        "Sign Up",
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
-                      ),
+                      child: const Text("Sign Up", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B5E20))),
                     ),
                   ],
                 ),
@@ -213,16 +195,8 @@ Future<void> _handleLogin() async {
           ),
           child: Stack(
             children: [
-              Positioned(
-                top: -50,
-                right: -50,
-                child: _circleDeco(150, Colors.white.withAlpha((0.1 * 255).toInt())),
-              ),
-              Positioned(
-                top: 50,
-                left: -20,
-                child: _circleDeco(100, Colors.white.withAlpha((0.05 * 255).toInt())),
-              ),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
               const Positioned(
                 top: 80,
                 left: 30,
@@ -231,10 +205,8 @@ Future<void> _handleLogin() async {
                   children: [
                     Icon(Icons.eco, size: 50, color: Colors.white),
                     SizedBox(height: 10),
-                    Text("Welcome Back",
-                        style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                    Text("Sign in to continue your eco journey",
-                        style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    Text("Welcome Back", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    Text("Sign in to continue your eco journey", style: TextStyle(color: Colors.white70, fontSize: 16)),
                   ],
                 ),
               ),
@@ -250,13 +222,11 @@ Future<void> _handleLogin() async {
       labelText: label,
       prefixIcon: Icon(icon, color: Colors.green[700]),
       filled: true,
-      fillColor: Colors.green.withAlpha((0.05 * 255).toInt()),
+      fillColor: Colors.green.withOpacity(0.05),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-      focusedBorder:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.green, width: 2)),
-      errorBorder:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.red, width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.green, width: 2)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.red, width: 1)),
     );
   }
 

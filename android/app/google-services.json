@@ -1,7 +1,6 @@
 {
   "project_info": {
     "project_number": "923392986981",
-    "firebase_url": "https://ecoscan-aaa86-default-rtdb.firebaseio.com",
     "project_id": "ecoscan-aaa86",
     "storage_bucket": "ecoscan-aaa86.firebasestorage.app"
   },
@@ -13,12 +12,7 @@
           "package_name": "com.example.ecoscan"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "923392986981-fv2ktbbl9arqgsh0p3iqp0ba70kru3cg.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyBIdF1DwS_Cm9Fh-S5eVQ725af1zxfKkuU"
@@ -26,19 +20,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "923392986981-fv2ktbbl9arqgsh0p3iqp0ba70kru3cg.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "923392986981-9ruih5jkrqm7led1ujf9uas85n7du02r.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.ecoscan"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
