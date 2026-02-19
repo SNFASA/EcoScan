@@ -1,6 +1,7 @@
 class UserModel{
   final String id;
   final String username;
+  final String profileurl;
   final String email;
   final int ecoPoints;
   final int weeklyPoints;
@@ -12,6 +13,7 @@ class UserModel{
   UserModel({
     required this.id,
     required this.username,
+    required this.profileurl,
     required this.email,
     required this.ecoPoints,
     required this.weeklyPoints,
@@ -25,6 +27,7 @@ class UserModel{
     return UserModel(
       id:id,
       username: json['username'] ?? '',
+      profileurl: json['profileurl'] ?? '',
       email: json['email'] ?? '',
       ecoPoints: json['ecoPoints'] ?? 0,
       weeklyPoints: json['weeklyPoints'] ?? 0,
