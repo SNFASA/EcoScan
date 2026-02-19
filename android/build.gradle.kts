@@ -1,3 +1,15 @@
+buildscript {
+    dependencies {
+        // Downgrade AGP to a stable 8.x version
+        classpath("com.android.tools.build:gradle:8.5.0")
+        classpath("com.google.gms:google-services:4.4.2")
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 allprojects {
     repositories {
         google()
