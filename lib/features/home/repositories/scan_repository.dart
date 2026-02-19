@@ -22,12 +22,13 @@ class ScanRepository {
     batch.set(scanRef, scan.toMap());
 
     // 2. Update user's aggregate stats and check week reset logic
-    batch.update(userRef, {
-      'totalScans': FieldValue.increment(1),
-      'ecoPoints': FieldValue.increment(scan.pointsEarned),
-      'co2Offset': FieldValue.increment(scan.co2Saved),
-      'weeklyPoints': FieldValue.increment(scan.pointsEarned),
-    });
+    // Inside ScanRepository.saveScan()
+      batch.update(userRef, {
+        'categoryCounts.${scan.category}': FieldValue.increment(1), // Updates the specific category
+        'totalScans': FieldValue.increment(1),
+        'ecoPoints': FieldValue.increment(scan.pointsEarned),
+        'co2Offset': FieldValue.increment(scan.co2Saved),
+      });
 
     await batch.commit();
   }
