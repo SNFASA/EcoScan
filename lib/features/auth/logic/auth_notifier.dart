@@ -76,9 +76,21 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// LOGOUT
-  Future<void> logout() async {
-    await repository.logout();
+Future<void> logout() async {
+  state = state.copyWith(isLoading: true, error: null);
+
+  try {
+    await FirebaseAuth.instance.signOut();
+    state = const AuthState();
+  } catch (e) {
+    state = state.copyWith(
+      isLoading: false,
+      error: e.toString(),
+    );
   }
+}
+
+
 
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
