@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '923392986981',
     projectId: 'ecoscan-aaa86',
     authDomain: 'ecoscan-aaa86.firebaseapp.com',
+    databaseURL: 'https://ecoscan-aaa86-default-rtdb.firebaseio.com',
     storageBucket: 'ecoscan-aaa86.firebasestorage.app',
     measurementId: 'G-0PVBH9G3CL',
   );
@@ -55,6 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:923392986981:android:999b69c0eea72a3f861b8c',
     messagingSenderId: '923392986981',
     projectId: 'ecoscan-aaa86',
+    databaseURL: 'https://ecoscan-aaa86-default-rtdb.firebaseio.com',
     storageBucket: 'ecoscan-aaa86.firebasestorage.app',
   );
 
@@ -63,7 +65,9 @@ class DefaultFirebaseOptions {
     appId: '1:923392986981:ios:8918dc9819494fa0861b8c',
     messagingSenderId: '923392986981',
     projectId: 'ecoscan-aaa86',
+    databaseURL: 'https://ecoscan-aaa86-default-rtdb.firebaseio.com',
     storageBucket: 'ecoscan-aaa86.firebasestorage.app',
+    iosClientId: '923392986981-9ruih5jkrqm7led1ujf9uas85n7du02r.apps.googleusercontent.com',
     iosBundleId: 'com.example.ecoscan',
   );
 
@@ -72,7 +76,9 @@ class DefaultFirebaseOptions {
     appId: '1:923392986981:ios:8918dc9819494fa0861b8c',
     messagingSenderId: '923392986981',
     projectId: 'ecoscan-aaa86',
+    databaseURL: 'https://ecoscan-aaa86-default-rtdb.firebaseio.com',
     storageBucket: 'ecoscan-aaa86.firebasestorage.app',
+    iosClientId: '923392986981-9ruih5jkrqm7led1ujf9uas85n7du02r.apps.googleusercontent.com',
     iosBundleId: 'com.example.ecoscan',
   );
 
@@ -82,7 +88,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '923392986981',
     projectId: 'ecoscan-aaa86',
     authDomain: 'ecoscan-aaa86.firebaseapp.com',
+    databaseURL: 'https://ecoscan-aaa86-default-rtdb.firebaseio.com',
     storageBucket: 'ecoscan-aaa86.firebasestorage.app',
     measurementId: 'G-V053PSFQ83',
   );
+
 }
