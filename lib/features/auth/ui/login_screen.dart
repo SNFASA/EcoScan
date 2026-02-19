@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../home/ui/home_screen.dart';
 import '../logic/auth_provider.dart';
 import 'register_screen.dart';
-import '../../../services/firebase_service.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -42,20 +41,10 @@ Future<void> _handleLogin() async {
   FocusScope.of(context).unfocus();
 
   try {
-    // 1️⃣ Login first
     await ref.read(authProvider.notifier).login(email, password);
 
-    // 2️⃣ Get the logged-in user
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // 3️⃣ Create Firestore document if it doesn't exist
-      await FirebaseService().createUserIfNotExists(user);
-    } else {
-      throw Exception("Login succeeded but user is null");
-    }
-
-    // 4️⃣ Navigate to Home safely
     if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
@@ -65,11 +54,11 @@ Future<void> _handleLogin() async {
       SnackBar(
         content: Text(e.toString()),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
+
 
 
   @override
