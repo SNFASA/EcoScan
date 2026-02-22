@@ -3,42 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../repositories/scoreboard_repository.dart';
 
-// Provide the Repository (Make sure this exists in your repo file)
+// Provide the Repository
 final scoreboardRepositoryProvider = Provider((ref) => ScoreboardRepository());
 
-// The AsyncNotifier Provider
-final scoreboardProvider = AsyncNotifierProvider<ScoreboardController, List<UserModel>>(() {
+// 🌟 CHANGED: Upgraded to StreamNotifierProvider for real-time magic
+final scoreboardProvider = StreamNotifierProvider<ScoreboardController, List<UserModel>>(() {
   return ScoreboardController();
 });
 
-class ScoreboardController extends AsyncNotifier<List<UserModel>> {
-  
+// 🌟 CHANGED: Now extends StreamNotifier
+class ScoreboardController extends StreamNotifier<List<UserModel>> {
+
   @override
-  FutureOr<List<UserModel>> build() async {
-    return _fetchLeaderboard();
+  Stream<List<UserModel>> build() {
+    return _streamLeaderboard();
   }
 
-  // Pure Dart Week Number Calculation (No 'intl' package needed)
+  // Your brilliant Pure Dart Week Number Calculation stays exactly the same!
   String _getCurrentWeekId() {
     DateTime now = DateTime.now();
-    // ISO 8601 week number logic
     int dayOfYear = int.parse(now.difference(DateTime(now.year, 1, 1)).inDays.toString());
     int weekNumber = ((dayOfYear - now.weekday + 10) / 7).floor();
-    
+
     return "${now.year}-W${weekNumber.toString().padLeft(2, '0')}";
   }
 
-  Future<List<UserModel>> _fetchLeaderboard() async {
-    // Get current week ID to potentially filter or log
+  Stream<List<UserModel>> _streamLeaderboard() {
     final currentWeek = _getCurrentWeekId();
-    print("Fetching leaderboard for: $currentWeek");
+    print("Streaming live leaderboard for: $currentWeek");
 
     final repository = ref.read(scoreboardRepositoryProvider);
-    return await repository.getTopWeeklyUsers(50);
+    // 🌟 CHANGED: Now calls the Stream method we created in the repository
+    return repository.getTopWeeklyUsersStream(50);
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchLeaderboard());
-  }
+// Note: We completely removed the refresh() method!
+// Because it's a live stream, it auto-refreshes the second Firestore changes.
 }

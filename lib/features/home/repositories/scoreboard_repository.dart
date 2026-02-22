@@ -4,15 +4,17 @@ import '../models/user_model.dart';
 class ScoreboardRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<UserModel>> getTopWeeklyUsers(int limit) async {
-    final querySnapshot = await _firestore
+  // 🌟 CHANGED: Future to Stream, and .get() to .snapshots()
+  Stream<List<UserModel>> getTopWeeklyUsersStream(int limit) {
+    return _firestore
         .collection('users')
         .orderBy('weeklyPoints', descending: true)
         .limit(limit)
-        .get();
-
-    return querySnapshot.docs.map((doc) {
-      return UserModel.fromMap(doc.id, doc.data());
-    }).toList();
+        .snapshots() // <-- This is the magic word for real-time updates!
+        .map((querySnapshot) {
+      return querySnapshot.docs.map((doc) {
+        return UserModel.fromMap(doc.id, doc.data());
+      }).toList();
+    });
   }
 }

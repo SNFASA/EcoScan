@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart'; // 👈 Added for Gallery fallback
 import 'package:ecoscan/core/widgets/smart_result_modal.dart';
 import '../../../services/gemini_service.dart';
 import '../../../services/points_service.dart';
@@ -66,15 +66,44 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     super.dispose();
   }
 
+  // 📸 OPTION 1: Take picture with the custom camera
   Future<void> _takePicture() async {
     if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
     setState(() => isAnalyzing = true);
 
     try {
       final XFile image = await controller!.takePicture();
-      File file = File(image.path);
+      // 🌟 WEB SAFE FIX: Convert to bytes instead of File!
+      final imageBytes = await image.readAsBytes();
+      await _processImageWithGemini(imageBytes);
+    } catch (e) {
+      _handleError(e);
+    }
+  }
 
-      final data = await GeminiService.identifyWaste(file);
+  // 🖼️ OPTION 2: Pick from Gallery (Crucial for Web/Emulator demos)
+  Future<void> _pickFromGallery() async {
+    if (isAnalyzing) return;
+
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
+
+      if (image != null) {
+        setState(() => isAnalyzing = true);
+        final imageBytes = await image.readAsBytes();
+        await _processImageWithGemini(imageBytes);
+      }
+    } catch (e) {
+      _handleError(e);
+    }
+  }
+
+  // 🤖 Central function to send to Gemini
+  Future<void> _processImageWithGemini(dynamic imageBytes) async {
+    try {
+      // ⚠️ IMPORTANT: Your GeminiService now needs to accept bytes!
+      final data = await GeminiService.identifyWaste(imageBytes);
 
       if (!mounted) return;
 
@@ -83,26 +112,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
       setState(() => isAnalyzing = false);
 
-      // ⚠️ FIXED: Solid White Background & Dark Barrier
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.white, // Solid white (Not transparent)
-        barrierColor: Colors.black87,  // Darkens the background significantly
+        backgroundColor: Colors.white,
+        barrierColor: Colors.black87,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        builder: (context) => SmartResultModal(data: data),
+        builder: (context) => SmartResultModal(data: data), // Ensure parameter name matches your modal
       );
     } catch (e) {
-      debugPrint("Error in scan process: $e");
-      if (!mounted) return;
-      setState(() => isAnalyzing = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
+      _handleError(e);
     }
+  }
+
+  void _handleError(dynamic e) {
+    debugPrint("Error in scan process: $e");
+    if (!mounted) return;
+    setState(() => isAnalyzing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: ${e.toString()}")),
+    );
   }
 
   @override
@@ -168,15 +199,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                             height: 4,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [
-                                  Colors.green.withOpacity(0),
-                                  Colors.green,
-                                  Colors.green.withOpacity(0),
-                                ],
+                                colors: [Colors.green.withOpacity(0), Colors.green, Colors.green.withOpacity(0)],
                               ),
-                              boxShadow: [
-                                BoxShadow(color: Colors.green.withOpacity(0.6), blurRadius: 10, spreadRadius: 2)
-                              ],
+                              boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.6), blurRadius: 10, spreadRadius: 2)],
                             ),
                           ),
                         ),
@@ -209,17 +234,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
           // Analyzing Loader
           if (isAnalyzing)
             Container(
-              color: Colors.black87, // Darker background for loading
+              color: Colors.black87,
               child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(color: Colors.green, strokeWidth: 5),
                     SizedBox(height: 20),
-                    Text(
-                      "Identifying Waste...",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                    Text("Identifying Waste...", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -233,54 +255,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
               decoration: const BoxDecoration(
-                color: Colors.black87, // Darker control panel
+                color: Colors.black87,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    "Align waste within the frame",
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
+                  const Text("Align waste within the frame", style: TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
                         onPressed: _toggleFlash,
-                        icon: Icon(
-                          isFlashOn ? Icons.flash_on : Icons.flash_off,
-                          color: isFlashOn ? Colors.amber : Colors.white,
-                          size: 30,
-                        ),
+                        icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off, color: isFlashOn ? Colors.amber : Colors.white, size: 30),
                       ),
                       GestureDetector(
                         onTap: isAnalyzing ? null : _takePicture,
                         child: Container(
                           width: 80,
                           height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                            color: Colors.transparent,
-                          ),
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4), color: Colors.transparent),
                           child: Center(
-                            child: Container(
-                              width: 65,
-                              height: 65,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
+                            child: Container(width: 65, height: 65, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
                           ),
                         ),
                       ),
+                      // 🌟 FIXED GALLERY BUTTON!
                       IconButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gallery coming soon!")));
-                        },
+                        onPressed: _pickFromGallery,
                         icon: const Icon(Icons.photo_library, color: Colors.white, size: 30),
                       ),
                     ],
@@ -302,10 +305,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         width: 30,
         height: 30,
         decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.green, width: 4),
-            left: BorderSide(color: Colors.green, width: 4),
-          ),
+          border: Border(top: BorderSide(color: Colors.green, width: 4), left: BorderSide(color: Colors.green, width: 4)),
           borderRadius: BorderRadius.only(topLeft: Radius.circular(10)),
         ),
       ),
