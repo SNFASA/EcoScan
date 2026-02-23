@@ -22,7 +22,7 @@ class AnalyticsScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text("User Error: $e")),
         data: (user) => Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: const BoxConstraints(maxWidth: 1000),
             child: SingleChildScrollView(
               child: Column(
                 children: [

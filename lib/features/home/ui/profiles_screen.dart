@@ -8,14 +8,14 @@ import 'package:ecoscan/features/auth/logic/auth_provider.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   File? _pickedImage;
   final ImagePicker _picker = ImagePicker();
 
@@ -71,160 +71,212 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
-      body: Consumer(
-        builder: (context, ref, _) {
-          final userAsync = ref.watch(userControllerProvider(firebaseUser.uid));
-
-          return userAsync.when(
+      body: ref.watch(userControllerProvider(firebaseUser.uid)).when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text("Error: $e")),
-            data: (user) => _ProfileBody(
-              user: user,
-              pickedImage: _pickedImage,
-              onPickImage: _pickImage,
-              onLogout: () async {
-                await ref.read(authProvider.notifier).logout();
-                if (mounted) {
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
-                }
-              },
+            data: (user) => SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeaderAndFloatingCard(context, user),
+                  const SizedBox(height: 80),
+                  _buildStatsSection(user),
+                  const SizedBox(height: 32),
+                  _buildActionButtons(user),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
-          );
-        },
-      ),
+          ),
     );
   }
-}
 
-class _ProfileBody extends StatelessWidget {
-  final dynamic user;
-  final File? pickedImage;
-  final VoidCallback onPickImage;
-  final VoidCallback onLogout;
-
-  const _ProfileBody({
-    required this.user,
-    required this.pickedImage,
-    required this.onPickImage,
-    required this.onLogout,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isDesktop = width >= 800;
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1000),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+  // ================= HEADER + FLOATING CARD =================
+  Widget _buildHeaderAndFloatingCard(BuildContext context, dynamic user) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        // Gradient Header
+        Container(
+          height: 280,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(40),
+              bottomRight: Radius.circular(40),
+            ),
+          ),
+          child: Stack(
             children: [
-              /// Avatar
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.green[100],
-                    backgroundImage: pickedImage != null ? FileImage(pickedImage!) : null,
-                    child: pickedImage == null
-                        ? const Icon(Icons.person, size: 60, color: Colors.green)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Material(
-                      color: Colors.green,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: onPickImage,
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(Icons.edit, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              Positioned(
+                top: -50,
+                right: -50,
+                child: _circleDeco(150, Colors.white.withValues(alpha: 0.1)),
               ),
-
-              const SizedBox(height: 16),
-              Text(user.username, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(user.email, style: TextStyle(color: Colors.grey[700])),
-
-              const SizedBox(height: 32),
-
-              /// Stats - FIXED: Using Wrap or IntrinsicHeight to avoid unbounded width constraints
-              isDesktop
-                  ? Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      alignment: WrapAlignment.center,
-                      children: _stats(user),
-                    )
-                  : Column(
-                      children: _stats(user)
-                          .map((e) => Padding(padding: const EdgeInsets.only(bottom: 16), child: e))
-                          .toList(),
-                    ),
-
-              const SizedBox(height: 32),
-
-              /// Buttons
-              Wrap(
-                spacing: 20,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  _actionButton(
-                    icon: Icons.edit,
-                    label: "Edit Profile",
-                    color: Colors.green,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
-                  ),
-                  _actionButton(
-                    icon: Icons.lock,
-                    label: "Change Password",
-                    color: Colors.orange,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
-                  ),
-                ],
+              Positioned(
+                top: 50,
+                left: -20,
+                child: _circleDeco(100, Colors.white.withValues(alpha: 0.05)),
               ),
-
-              const SizedBox(height: 40),
-
-              _actionButton(
-                icon: Icons.logout,
-                label: "Logout",
-                color: Colors.redAccent,
-                width: 200,
-                onTap: onLogout,
+              const Padding(
+                padding: EdgeInsets.only(top: 80, left: 30),
+                child: Text(
+                  "My Profile",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+
+        // Floating Card
+        Positioned(
+          bottom: -60,
+          child: Container(
+            width: 340,
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: _pickedImage != null
+                          ? FileImage(_pickedImage!)
+                          : (user.profileurl != null &&
+                                  user.profileurl.isNotEmpty)
+                              ? NetworkImage(user.profileurl)
+                              : null,
+                      child: (_pickedImage == null &&
+                              (user.profileurl == null ||
+                                  user.profileurl.isEmpty))
+                          ? const Icon(Icons.person,
+                              size: 45, color: Colors.grey)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  user.username,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    user.rankTier,
+                    style: const TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _circleDeco(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    );
+  }
+
+  // ================= STATS SECTION =================
+  Widget _buildStatsSection(dynamic user) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 800;
+            final stats = [
+              _statCard("Eco Points", user.ecoPoints.toString(),
+                  Icons.stars, Colors.amber),
+              _statCard("Weekly Points", user.weeklyPoints.toString(),
+                  Icons.auto_graph, Colors.green),
+              _statCard("Total Scans", user.totalScans.toString(),
+                  Icons.recycling, Colors.teal),
+              _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(2)} kg",
+                  Icons.eco, Colors.lightGreen),
+              _statCard("Rank", user.rankTier, Icons.emoji_events, Colors.orange),
+              _statCard("Streak", "${user.streak} days", Icons.whatshot,
+                  Colors.redAccent),
+            ];
+
+            return isDesktop
+                ? Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    alignment: WrapAlignment.center,
+                    children: stats,
+                  )
+                : Column(
+                    children: stats
+                        .map((e) =>
+                            Padding(padding: const EdgeInsets.only(bottom: 16), child: e))
+                        .toList(),
+                  );
+          },
         ),
       ),
     );
   }
 
-  List<Widget> _stats(user) {
-    return [
-      _statCard("Eco Points", user.ecoPoints.toString(), Icons.stars, Colors.amber),
-      _statCard("Weekly Points", user.weeklyPoints.toString(), Icons.auto_graph, Colors.green),
-      _statCard("Total Scans", user.totalScans.toString(), Icons.recycling, Colors.teal),
-      _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(2)} kg", Icons.eco, Colors.lightGreen),
-      _statCard("Rank", user.rankTier, Icons.emoji_events, Colors.orange),
-      _statCard("Streak", "${user.streak} days", Icons.whatshot, Colors.redAccent),
-    ];
-  }
-
   Widget _statCard(String title, String value, IconData icon, Color color) {
     return SizedBox(
-      width: 220, // Give fixed width for desktop grid/wrap
+      width: 220,
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
@@ -233,11 +285,11 @@ class _ProfileBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.2), // FIXED: Using withValues
+                backgroundColor: color.withValues(alpha: 0.2),
                 child: Icon(icon, color: color),
               ),
               const SizedBox(width: 12),
-              Expanded( // Changed Flexible to Expanded to handle text overflow properly
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -245,7 +297,8 @@ class _ProfileBody extends StatelessWidget {
                     Text(value,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(title,
                         maxLines: 1,
@@ -258,6 +311,43 @@ class _ProfileBody extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // ================= ACTION BUTTONS =================
+  Widget _buildActionButtons(dynamic user) {
+    return Wrap(
+      spacing: 20,
+      runSpacing: 16,
+      alignment: WrapAlignment.center,
+      children: [
+        _actionButton(
+          icon: Icons.edit,
+          label: "Edit Profile",
+          color: Colors.green,
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+        ),
+        _actionButton(
+          icon: Icons.lock,
+          label: "Change Password",
+          color: Colors.orange,
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+        ),
+        _actionButton(
+          icon: Icons.logout,
+          label: "Logout",
+          color: Colors.redAccent,
+          width: 200,
+          onTap: () async {
+            await ref.read(authProvider.notifier).logout();
+            if (mounted) {
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+            }
+          },
+        ),
+      ],
     );
   }
 
