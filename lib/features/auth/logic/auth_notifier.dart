@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_provider.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
+import '../../../services/firebase_service.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository repository;
@@ -19,9 +20,17 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      await repository.login(email, password);
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-      // Reset state after success
+      // 🔥 CREATE USER DOCUMENT IF NOT EXIST
+      final user = credential.user;
+      if (user != null) {
+        await FirebaseService().createUserIfNotExists(user);
+      } else {
+        throw Exception("Login success but user is null");
+      }
+
       state = const AuthState();
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
@@ -31,7 +40,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: "Something went wrong",
+        error: e.toString(),
       );
     }
   }
@@ -41,7 +50,17 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      await repository.register(email, password);
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      // 🔥 CREATE USER DOCUMENT
+      final user = credential.user;
+      if (user != null) {
+        await FirebaseService().createUserIfNotExists(user);
+      } else {
+        throw Exception("Register success but user is null");
+      }
+
       state = const AuthState();
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
@@ -51,17 +70,28 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: "Something went wrong",
+        error: e.toString(),
       );
     }
   }
 
   /// LOGOUT
-  Future<void> logout() async {
-    await repository.logout();
-  }
+Future<void> logout() async {
+  state = state.copyWith(isLoading: true, error: null);
 
-  /// Better Firebase error mapping
+  try {
+    await FirebaseAuth.instance.signOut();
+    state = const AuthState();
+  } catch (e) {
+    state = state.copyWith(
+      isLoading: false,
+      error: e.toString(),
+    );
+  }
+}
+
+
+
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
