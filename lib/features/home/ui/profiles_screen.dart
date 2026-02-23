@@ -75,28 +75,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text("Error: $e")),
             data: (user) => SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildHeaderAndFloatingCard(context, user),
-                  const SizedBox(height: 80),
-                  _buildStatsSection(user),
-                  const SizedBox(height: 32),
-                  _buildActionButtons(user),
-                  const SizedBox(height: 40),
-                ],
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Column(
+                    children: [
+                      _buildHeaderAndFloatingCard(context, user),
+                      const SizedBox(height: 80),
+                      _buildStatsSection(user),
+                      const SizedBox(height: 32),
+                      _buildActionButtons(user),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
     );
   }
 
-  // ================= HEADER + FLOATING CARD =================
+  // ================= HEADER =================
   Widget _buildHeaderAndFloatingCard(BuildContext context, dynamic user) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // Gradient Header
+        Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withAlpha(25))),
+        Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withAlpha(13))),
         Container(
           height: 280,
           width: double.infinity,
@@ -111,34 +117,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               bottomRight: Radius.circular(40),
             ),
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -50,
-                right: -50,
-                child: _circleDeco(150, Colors.white.withValues(alpha: 0.1)),
+          child: const Padding(
+            padding: EdgeInsets.only(top: 80, left: 30),
+            child: Text(
+              "My Profile",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
-              Positioned(
-                top: 50,
-                left: -20,
-                child: _circleDeco(100, Colors.white.withValues(alpha: 0.05)),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 80, left: 30),
-                child: Text(
-                  "My Profile",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
 
-        // Floating Card
         Positioned(
           bottom: -60,
           child: Container(
@@ -186,36 +177,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             color: Colors.black,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: Colors.white,
-                          ),
+                          child: const Icon(Icons.edit,
+                              size: 16, color: Colors.white),
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 15),
-                Text(
-                  user.username,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(user.username,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    user.rankTier,
-                    style: const TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.w600),
-                  ),
+                  child: Text(user.rankTier,
+                      style: const TextStyle(
+                          color: Colors.green, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -225,52 +209,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _circleDeco(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
-  }
-
-  // ================= STATS SECTION =================
+  // ================= STATS =================
   Widget _buildStatsSection(dynamic user) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1000),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 800;
-            final stats = [
-              _statCard("Eco Points", user.ecoPoints.toString(),
-                  Icons.stars, Colors.amber),
-              _statCard("Weekly Points", user.weeklyPoints.toString(),
-                  Icons.auto_graph, Colors.green),
-              _statCard("Total Scans", user.totalScans.toString(),
-                  Icons.recycling, Colors.teal),
-              _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(2)} kg",
-                  Icons.eco, Colors.lightGreen),
-              _statCard("Rank", user.rankTier, Icons.emoji_events, Colors.orange),
-              _statCard("Streak", "${user.streak} days", Icons.whatshot,
-                  Colors.redAccent),
-            ];
+    final stats = [
+      _statCard("Eco Points", user.ecoPoints.toString(), Icons.stars, Colors.amber),
+      _statCard("Weekly Points", user.weeklyPoints.toString(), Icons.auto_graph, Colors.green),
+      _statCard("Total Scans", user.totalScans.toString(), Icons.recycling, Colors.teal),
+      _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(2)} kg", Icons.eco, Colors.lightGreen),
+      _statCard("Rank", user.rankTier, Icons.emoji_events, Colors.orange),
+      _statCard("Streak", "${user.streak} days", Icons.whatshot, Colors.redAccent),
+    ];
 
-            return isDesktop
-                ? Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    alignment: WrapAlignment.center,
-                    children: stats,
-                  )
-                : Column(
-                    children: stats
-                        .map((e) =>
-                            Padding(padding: const EdgeInsets.only(bottom: 16), child: e))
-                        .toList(),
-                  );
-          },
-        ),
-      ),
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      alignment: WrapAlignment.center,
+      children: stats,
     );
   }
 
@@ -282,7 +236,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               CircleAvatar(
                 backgroundColor: color.withValues(alpha: 0.2),
@@ -292,7 +245,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(value,
                         maxLines: 1,
@@ -314,7 +266,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ================= ACTION BUTTONS =================
+  // ================= BUTTONS =================
   Widget _buildActionButtons(dynamic user) {
     return Wrap(
       spacing: 20,
@@ -367,9 +319,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
         ),
       ),
+    );
+  }
+    Widget _circleDeco(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }
