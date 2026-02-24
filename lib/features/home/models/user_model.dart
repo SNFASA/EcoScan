@@ -42,7 +42,7 @@ class UserModel {
       rankTier: json['rankTier'] ?? 'Bronze',
       streak: json['streak'] ?? 0,
       categoryCounts: Map<String, int>.from(json['categoryCounts'] ?? {}),
-      nextMilestoneCo2: (json['nextMilestoneCo2'] ?? 20.0).toDouble(),
+      nextMilestoneCo2: (json['nextMilestoneCo2'] ?? 50.0).toDouble(),
       lastScanWeekId: json['lastScanWeekId'] ?? '',
     );
   }

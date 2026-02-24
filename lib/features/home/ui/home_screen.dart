@@ -7,6 +7,7 @@ import 'scoreboard_screen.dart';
 import 'camera_screen.dart';
 import 'analytics_screen.dart';
 import 'profiles_screen.dart';
+import 'history_screen.dart';
 
 // Controller
 import '../controllers/user_controller.dart';
@@ -24,7 +25,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _onItemTapped(int index) async {
     // Logout index = 5
-    if (index == 5) {
+    if (index == 6) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -66,6 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const ScoreboardScreen(),
       const CameraScreen(),
       const AnalyticsScreen(),
+      const HistoryScreen(),
       const ProfileScreen(),
     ];
 
@@ -86,6 +88,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 NavigationDestination(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
                 NavigationDestination(icon: Icon(Icons.camera_enhance_rounded), label: 'Scan'),
                 NavigationDestination(icon: Icon(Icons.insights_rounded), label: 'Impact'),
+                NavigationDestination(icon: Icon(Icons.history_rounded), label: 'History'),
                 NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
               ],
             ),
@@ -108,6 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 NavigationRailDestination(icon: Icon(Icons.emoji_events_rounded), label: Text('Ranks')),
                 NavigationRailDestination(icon: Icon(Icons.camera_enhance_rounded), label: Text('Scan')),
                 NavigationRailDestination(icon: Icon(Icons.insights_rounded), label: Text('Impact')),
+                NavigationRailDestination(icon: Icon(Icons.history_rounded), label: Text('History')),
                 NavigationRailDestination(icon: Icon(Icons.person_rounded), label: Text('Profile')),
               ],
             ),
@@ -306,9 +310,7 @@ class DashboardTab extends ConsumerWidget {
       children: [
         Expanded(child: _actionButton(Icons.qr_code_scanner, "Scan Now", Colors.blue, () => onSwitchTab(2))),
         const SizedBox(width: 15),
-        Expanded(child: _actionButton(Icons.history_rounded, "History", Colors.orange, () {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("History coming soon!")));
-        })),
+        Expanded(child: _actionButton(Icons.history_rounded, "History", Colors.orange, () => onSwitchTab(4))),
         const SizedBox(width: 15),
         Expanded(child: _actionButton(Icons.map_rounded, "Centers", Colors.teal, () {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Maps coming soon!")));

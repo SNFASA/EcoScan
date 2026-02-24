@@ -98,8 +98,8 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
           child: Stack(
             children: [
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
               Positioned(
                 top: 60,
                 left: 0,
@@ -129,7 +129,7 @@ class AnalyticsScreen extends ConsumerWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
-                BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.green.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
               ],
             ),
             child: Row(
@@ -187,26 +187,30 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildChartList(Map<String, double> data) {
-    if (data.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text("No data for this period.", style: TextStyle(color: Colors.grey)),
-      );
-    }
-    
-    final total = data.values.fold(0.0, (sum, val) => sum + val);
-    
-    return Column(
-      children: data.entries.map((e) {
-        return _buildImpactBar(
-          e.key, 
-          e.value / total, 
-          _getCategoryColor(e.key), 
-          _getCategoryIcon(e.key),
-        );
-      }).toList(),
+  // DEFECT FIX: If there is no data or total is zero, show a friendly message
+  final total = data.values.fold(0.0, (sum, val) => sum + val);
+
+  if (data.isEmpty || total == 0) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: Text("No recycling data found for this period.", 
+          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+      ),
     );
   }
+  
+  return Column(
+    children: data.entries.map((e) {
+      return _buildImpactBar(
+        e.key, 
+        e.value / total, // Now safe because total > 0
+        _getCategoryColor(e.key), 
+        _getCategoryIcon(e.key),
+      );
+    }).toList(),
+  );
+}
 
   Widget _buildMilestoneCard(double current, double target) {
     double progress = (target > 0) ? (current / target).clamp(0.0, 1.0) : 0.0;

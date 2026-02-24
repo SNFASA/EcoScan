@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/user_model.dart';
 
 // Use a simple enum for the filters
 enum AnalyticsFilter { week, month, allTime }
@@ -30,9 +29,8 @@ class AnalyticsController extends AsyncNotifier<Map<String, double>> {
       // INSTANT: Fetch from Category Counter in User Document
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final data = doc.data()?['categoryCounts'] as Map<String, dynamic>? ?? {};
-      
-      // Convert Map<String, int> to Map<String, double> for the UI bars
-      return data.map((key, value) => MapEntry(key, (value as num).toDouble()));
+      final Map<String, dynamic> rawData = Map<String, dynamic>.from(data);
+      return Map<String, double>.from(rawData.map((key, value) => MapEntry(key, (value as num).toDouble())));
     } else {
       // DYNAMIC: Query Scans sub-collection for specific range
       DateTime now = DateTime.now();
@@ -49,7 +47,8 @@ class AnalyticsController extends AsyncNotifier<Map<String, double>> {
 
       Map<String, double> counts = {};
       for (var doc in query.docs) {
-        final cat = doc.data()['category'] ?? 'General';
+        final data = doc.data();
+        final String cat = data['category']?.toString() ?? 'General';
         counts[cat] = (counts[cat] ?? 0.0) + 1.0;
       }
       return counts;
