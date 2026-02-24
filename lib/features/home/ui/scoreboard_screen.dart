@@ -38,7 +38,7 @@ class ScoreboardScreen extends ConsumerWidget {
 
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
+              constraints: const BoxConstraints(maxWidth: 1000),
               child: SingleChildScrollView(
                 child: Column(
                   children: [
