@@ -7,6 +7,7 @@ import '../controllers/user_controller.dart';
 import 'package:ecoscan/features/auth/logic/auth_provider.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import '../models/user_model.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +19,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   File? _pickedImage;
   final ImagePicker _picker = ImagePicker();
+
 
   Future<void> _pickImage() async {
     final picked = await showModalBottomSheet<XFile?>(
@@ -117,21 +119,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               bottomRight: Radius.circular(40),
             ),
           ),
-          child: const Padding(
-            padding: EdgeInsets.only(top: 80, left: 30),
-            child: Text(
-              "My Profile",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          child: Stack(
+            children:[
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
+              Positioned(
+                top: 60,
+                left: 0,
+                right: 0,
+                child: Column(
+                  children: [
+                    const Text("Profile", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),  
+            ],
           ),
         ),
 
         Positioned(
-          bottom: -60,
+          bottom: -70,
           child: Container(
             width: 340,
             padding: const EdgeInsets.all(25),
@@ -267,41 +275,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   // ================= BUTTONS =================
-  Widget _buildActionButtons(dynamic user) {
-    return Wrap(
-      spacing: 20,
-      runSpacing: 16,
-      alignment: WrapAlignment.center,
-      children: [
-        _actionButton(
-          icon: Icons.edit,
-          label: "Edit Profile",
-          color: Colors.green,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+  Widget _buildActionButtons(UserModel user) { // Use the specific model type
+  return Wrap(
+    spacing: 20,
+    runSpacing: 16,
+    alignment: WrapAlignment.center,
+    children: [
+      // 1. Edit Profile Button
+      _actionButton(
+        icon: Icons.edit,
+        label: "Edit Profile",
+        color: Colors.green,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              // Pass the 'user' object directly from the parameter
+              builder: (context) => EditProfileScreen(user: user), 
+            ),
+          );
+        },
+      ),
+
+      // 2. Change Password Button
+      _actionButton(
+        icon: Icons.lock,
+        label: "Change Password",
+        color: Colors.orange,
+        onTap: () => Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (_) => const ChangePasswordScreen())
         ),
-        _actionButton(
-          icon: Icons.lock,
-          label: "Change Password",
-          color: Colors.orange,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
-        ),
-        _actionButton(
-          icon: Icons.logout,
-          label: "Logout",
-          color: Colors.redAccent,
-          width: 200,
-          onTap: () async {
+      ),
+
+      // 3. Logout Button
+      _actionButton(
+        icon: Icons.logout,
+        label: "Logout",
+        color: Colors.redAccent,
+        width: 200, // Matching your desktop style
+        onTap: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Logout'),
+              content: const Text('Are you sure you want to logout?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Logout'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
             await ref.read(authProvider.notifier).logout();
             if (mounted) {
               Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
             }
-          },
-        ),
-      ],
-    );
-  }
+          }
+        },
+      ),
+    ],
+  );
+}
 
   Widget _actionButton({
     required IconData icon,
@@ -325,7 +367,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
-    Widget _circleDeco(double size, Color color) {
+  Widget _circleDeco(double size, Color color) {
     return Container(
       width: size,
       height: size,
