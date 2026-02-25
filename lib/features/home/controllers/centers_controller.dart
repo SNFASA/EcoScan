@@ -1,15 +1,17 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart'; // 🌟 CHANGED: Replaced Google Maps
+import 'package:latlong2/latlong.dart';        // 🌟 CHANGED: Using free LatLng
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recycleingcenter_model.dart';
-import '../repositories/centers_repository.dart';
+import '../repositories/centers_repository.dart'; // Make sure this path matches your repo
 
 final centersProvider = StreamNotifierProvider<CentersController, List<RecyclingCenterModel>>(() {
   return CentersController();
 });
 
 class CentersController extends StreamNotifier<List<RecyclingCenterModel>> {
-  GoogleMapController? mapController;
+  // 🌟 CHANGED: Initialized the OpenStreetMap controller
+  final MapController mapController = MapController();
   String selectedCategory = "All";
 
   @override
@@ -22,13 +24,9 @@ class CentersController extends StreamNotifier<List<RecyclingCenterModel>> {
     ref.invalidateSelf(); // Refresh the stream and UI
   }
 
-  // Fly the map to a specific location
+  // 🌟 CHANGED: Using flutter_map's `.move()` syntax instead of animateCamera
   void animateToCenter(double lat, double lng) {
-    mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(lat, lng), zoom: 15),
-      ),
-    );
+    mapController.move(LatLng(lat, lng), 15.0);
   }
 
   Future<Position> getCurrentLocation() async {

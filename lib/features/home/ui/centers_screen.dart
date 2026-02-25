@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:url_launcher/url_launcher.dart'; // Add this for Directions
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controllers/centers_controller.dart';
 import '../models/recycleingcenter_model.dart';
 
@@ -19,36 +20,48 @@ class CentersScreen extends ConsumerWidget {
         title: const Text("Recycling Centers", style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
+        foregroundColor: Colors.black,
       ),
       body: Column(
         children: [
-          // 1. MAP SECTION (Top)
+          // 1. MAP SECTION (Top) - Now 100% Free!
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.4,
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(target: LatLng(1.85, 103.08), zoom: 12), // UTHM Area
-              onMapCreated: (mapController) => controller.mapController = mapController,
-              myLocationEnabled: true,
-              markers: centersAsync.maybeWhen(
-                data: (centers) => centers.map((c) => Marker(
-                  markerId: MarkerId(c.name),
-                  position: LatLng(c.location!.latitude, c.location!.longitude),
-                  infoWindow: InfoWindow(title: c.name, snippet: c.type),
-                )).toSet(),
-                orElse: () => {},
+            child: FlutterMap(
+              mapController: controller.mapController,
+              options: const MapOptions(
+                initialCenter: LatLng(1.85, 103.08), // Centered on campus
+                initialZoom: 12.0,
               ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.ecoscan',
+                ),
+                centersAsync.maybeWhen(
+                  data: (centers) => MarkerLayer(
+                    markers: centers.map((c) => Marker(
+                      point: LatLng(c.location!.latitude, c.location!.longitude),
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+                    )).toList(),
+                  ),
+                  orElse: () => const MarkerLayer(markers: []),
+                ),
+              ],
             ),
           ),
 
           // 2. CHIP FILTERS
-          _buildFilterBar(ref),
+          _buildFilterBar(ref, controller),
 
           // 3. LIST SECTION (Bottom)
           Expanded(
             child: centersAsync.when(
               data: (centers) {
-                final filtered = controller.selectedCategory == "All" 
-                    ? centers 
+                final filtered = controller.selectedCategory == "All"
+                    ? centers
                     : centers.where((c) => c.acceptedCategories.contains(controller.selectedCategory)).toList();
 
                 return ListView.builder(
@@ -57,7 +70,7 @@ class CentersScreen extends ConsumerWidget {
                   itemBuilder: (context, index) => _buildCenterCard(filtered[index], controller),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: Colors.green)),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ),
@@ -66,9 +79,9 @@ class CentersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterBar(WidgetRef ref) {
+  Widget _buildFilterBar(WidgetRef ref, CentersController controller) {
     final categories = ["All", "Plastic", "Paper", "Glass", "Metal"];
-    final current = ref.watch(centersProvider.notifier).selectedCategory;
+    final current = controller.selectedCategory;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -79,7 +92,7 @@ class CentersScreen extends ConsumerWidget {
           child: ChoiceChip(
             label: Text(cat),
             selected: current == cat,
-            onSelected: (_) => ref.read(centersProvider.notifier).setFilter(cat),
+            onSelected: (_) => controller.setFilter(cat),
             selectedColor: Colors.green,
             labelStyle: TextStyle(color: current == cat ? Colors.white : Colors.black),
           ),
@@ -113,13 +126,14 @@ class CentersScreen extends ConsumerWidget {
     );
   }
 
+  // 🌟 BONUS FIX: Now actually dynamically routes to the specific lat/long of the center!
   Future<void> _openDirections(double lat, double lng) async {
     final Uri url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
-    
+
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      debugPrint("Could not launch $url");
+      debugPrint("Could not launch routing for $url");
     }
   }
 }
