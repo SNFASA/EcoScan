@@ -38,7 +38,7 @@ class ScoreboardScreen extends ConsumerWidget {
 
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
+              constraints: const BoxConstraints(maxWidth: 1000),
               child: SingleChildScrollView(
                 child: Column(
                   children: [
@@ -70,7 +70,7 @@ class ScoreboardScreen extends ConsumerWidget {
                                 boxShadow: [
                                   BoxShadow(
                                     color:
-                                        Colors.black.withOpacity(0.03),
+                                        Colors.black.withValues(alpha: 0.03),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   )
@@ -180,12 +180,12 @@ class ScoreboardScreen extends ConsumerWidget {
                   top: -50,
                   right: -50,
                   child: _circleDeco(
-                      150, Colors.white.withOpacity(0.1))),
+                      150, Colors.white.withValues(alpha: 0.1))),
               Positioned(
                   top: 50,
                   left: -20,
                   child: _circleDeco(
-                      100, Colors.white.withOpacity(0.05))),
+                      100, Colors.white.withValues(alpha: 0.05))),
               const Positioned(
                 top: 50,
                 left: 0,
@@ -222,7 +222,7 @@ class ScoreboardScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.green.withOpacity(0.2),
+                    color: Colors.green.withValues(alpha: 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10)),
               ],
@@ -268,7 +268,7 @@ class ScoreboardScreen extends ConsumerWidget {
           CircleAvatar(
             radius: rank == 1 ? 25 : 18,
             backgroundColor:
-                isMe ? Colors.green : color.withOpacity(0.2),
+                isMe ? Colors.green : color.withValues(alpha: 0.2),
             backgroundImage: user.profileurl.isNotEmpty
                 ? NetworkImage(user.profileurl)
                 : null,
@@ -306,8 +306,8 @@ class ScoreboardScreen extends ConsumerWidget {
                 const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
                 color: isMe
-                    ? Colors.green.withOpacity(0.3)
-                    : color.withOpacity(0.3),
+                    ? Colors.green.withValues(alpha: 0.3)
+                    : color.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(5)),
             alignment: Alignment.center,
             child: Text(

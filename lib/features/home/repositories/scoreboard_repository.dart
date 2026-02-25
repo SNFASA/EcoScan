@@ -10,11 +10,11 @@ class ScoreboardRepository {
         .collection('users')
         .orderBy('weeklyPoints', descending: true)
         .limit(limit)
-        .snapshots() // <-- This is the magic word for real-time updates!
+        .snapshots()
         .map((querySnapshot) {
-      return querySnapshot.docs.map((doc) {
-        return UserModel.fromMap(doc.id, doc.data());
-      }).toList();
-    });
+          return querySnapshot.docs.map((doc) {
+            return UserModel.fromMap(doc.id, doc.data()); 
+          }).toList();
+        });
   }
 }

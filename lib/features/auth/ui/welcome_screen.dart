@@ -65,7 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.green.withOpacity(0.05),
+                      color: Colors.green.withValues(alpha: 0.05),
                       blurRadius: 20,
                       offset: const Offset(0, -5),
                     ),
@@ -136,8 +136,8 @@ class WelcomeScreen extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(top: -50, right: -20, child: _circleDeco(150, Colors.white.withOpacity(0.08))),
-          Positioned(bottom: -30, left: -40, child: _circleDeco(120, Colors.white.withOpacity(0.05))),
+          Positioned(top: -50, right: -20, child: _circleDeco(150, Colors.white.withValues(alpha: 0.08))),
+          Positioned(bottom: -30, left: -40, child: _circleDeco(120, Colors.white.withValues(alpha: 0.05))),
 
           Center(
             child: Column(
@@ -149,7 +149,7 @@ class WelcomeScreen extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10)),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10)),
                     ],
                   ),
                   child: const Icon(Icons.eco_rounded, size: 50, color: Color(0xFF1B5E20)),
@@ -163,7 +163,7 @@ class WelcomeScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -186,14 +186,14 @@ class WelcomeScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 8)),
         ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconColor.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 28),
           ),
           const SizedBox(width: 16),

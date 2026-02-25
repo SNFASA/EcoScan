@@ -155,7 +155,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
           // Focus Overlay
           ColorFiltered(
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.5),
+              Colors.black.withValues(alpha: 0.5),
               BlendMode.srcOut,
             ),
             child: Stack(
@@ -199,9 +199,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                             height: 4,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.green.withOpacity(0), Colors.green, Colors.green.withOpacity(0)],
+                                colors: [Colors.green.withValues(alpha: 0), Colors.green, Colors.green.withValues(alpha: 0)],
                               ),
-                              boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.6), blurRadius: 10, spreadRadius: 2)],
+                              boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.6), blurRadius: 10, spreadRadius: 2)],
                             ),
                           ),
                         ),
@@ -218,7 +218,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               width: 320,
               height: 320,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: Column(

@@ -11,6 +11,7 @@ class UserModel {
   final int streak;
   final Map<String, int> categoryCounts; 
   final double nextMilestoneCo2;
+  final String lastScanWeekId;
 
   UserModel({
     required this.id,
@@ -25,6 +26,7 @@ class UserModel {
     required this.streak,
     required this.categoryCounts,
     required this.nextMilestoneCo2,
+    required this.lastScanWeekId,
   });
 
   factory UserModel.fromMap(String id, Map<String, dynamic> json) {
@@ -40,7 +42,8 @@ class UserModel {
       rankTier: json['rankTier'] ?? 'Bronze',
       streak: json['streak'] ?? 0,
       categoryCounts: Map<String, int>.from(json['categoryCounts'] ?? {}),
-      nextMilestoneCo2: (json['nextMilestoneCo2'] ?? 20.0).toDouble(),
+      nextMilestoneCo2: (json['nextMilestoneCo2'] ?? 50.0).toDouble(),
+      lastScanWeekId: json['lastScanWeekId'] ?? '',
     );
   }
 
@@ -57,6 +60,7 @@ class UserModel {
       'streak': streak,
       'categoryCounts': categoryCounts,
       'nextMilestoneCo2': nextMilestoneCo2,
+      'lastScanWeekId': lastScanWeekId,
     };
   }
 }

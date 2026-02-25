@@ -75,8 +75,8 @@ class TemplateScreen extends ConsumerWidget {
           child: Stack(
             children: [
               // 🫧 Decorative Circles
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
 
               // 🅰️ Header Text
               const Padding(
@@ -105,7 +105,7 @@ class TemplateScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withOpacity(0.2), // ❇️ Soft Green Glow
+                  color: Colors.green.withValues(alpha: 0.2), // ❇️ Soft Green Glow
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -129,7 +129,7 @@ class TemplateScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20), // 🟢 20px Radius
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Super subtle shadow
+            color: Colors.black.withValues(alpha: 0.03), // Super subtle shadow
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -141,7 +141,7 @@ class TemplateScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1), // 10% Opacity Background
+              color: Colors.blue.withValues(alpha: 0.1), // 10% Opacity Background
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.eco_rounded, color: Colors.blue, size: 28),

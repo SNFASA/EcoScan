@@ -54,7 +54,7 @@ class ScoreboardScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             border: isMe ? Border.all(color: Colors.green, width: 2) : null,
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
                             ],
                           ),
                           child: ListTile(
@@ -111,8 +111,8 @@ class ScoreboardScreen extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
 
               // ⚠️ FIXED: Moved text higher up (top: 50) so the card doesn't cover it
               const Positioned(
@@ -143,7 +143,7 @@ class ScoreboardScreen extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
-                BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.green.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
               ],
             ),
             child: Row(
@@ -169,7 +169,7 @@ class ScoreboardScreen extends StatelessWidget {
           if (rank == 1) const Icon(Icons.emoji_events, color: Colors.amber, size: 24),
           CircleAvatar(
             radius: rank == 1 ? 25 : 18,
-            backgroundColor: color.withOpacity(0.2),
+            backgroundColor: color.withValues(alpha: 0.2),
             child: Text(user['avatar'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
           ),
           const SizedBox(height: 5),
@@ -181,7 +181,7 @@ class ScoreboardScreen extends StatelessWidget {
             height: rank == 1 ? 60 : (rank == 2 ? 40 : 30),
             width: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(color: color.withOpacity(0.3), borderRadius: BorderRadius.circular(5)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(5)),
             alignment: Alignment.center,
             child: Text("$rank", style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 18)),
           )
@@ -198,3 +198,92 @@ class ScoreboardScreen extends StatelessWidget {
     );
   }
 }
+
+
+createdAt
+February 19, 2026 at 1:00:58 AM UTC+8
+(timestamp)
+
+
+ecoPoints
+5420
+(number)
+
+
+email
+"nabil.0413@gmail.com"
+(string)
+
+
+lastActive
+February 19, 2026 at 1:01:19 AM UTC+8
+(timestamp)
+
+
+rankTier
+"Gold"
+(string)
+
+
+streak
+5
+(number)
+
+
+totalScans
+85
+(number)
+
+
+username
+"Syed Nabil"
+(string)
+
+
+weekId
+"2026-W07"
+(string)
+
+
+weeklyPoints
+320
+
+
+
+category
+"plastic"
+(string)
+
+
+co2Saved
+0.12
+(number)
+
+
+confidenceScore
+0.94
+(number)
+
+
+imageUrl
+""
+(string)
+
+
+pointsEarned
+20
+(number)
+
+
+timestamp
+February 19, 2026 at 2:08:15 AM UTC+8
+(timestamp)
+
+
+wasteType
+"Plastic Bottle"
+(string)
+
+
+weekId
+"2026-W07"
