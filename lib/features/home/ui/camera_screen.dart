@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart'; // 👈 Added for Gallery fallback
+import 'package:image_picker/image_picker.dart';
 import 'package:ecoscan/core/widgets/smart_result_modal.dart';
-import '../../../services/gemini_service.dart';
-import '../../../services/points_service.dart';
+
+import '../controllers/scan_controller.dart';
+import '../models/scan_model.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -26,7 +27,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _setupCamera();
-
     _scanController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -37,7 +37,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     try {
       _cameras = await availableCameras();
       if (_cameras != null && _cameras!.isNotEmpty) {
-        controller = CameraController(_cameras![0], ResolutionPreset.high, enableAudio: false);
+        // 🚀 SPEED FIX: Changed to medium resolution for faster processing
+        controller = CameraController(_cameras![0], ResolutionPreset.medium, enableAudio: false);
         await controller!.initialize();
         if (!mounted) return;
         setState(() => isCameraInitialized = true);
@@ -48,10 +49,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   }
 
   Future<void> _toggleFlash() async {
-    if (controller == null) return;
+    if (controller == null || !controller!.value.isInitialized) return;
     try {
       isFlashOn = !isFlashOn;
       await controller!.setFlashMode(isFlashOn ? FlashMode.torch : FlashMode.off);
+      if (!mounted) return;
       setState(() {});
     } catch (e) {
       debugPrint("Flash Error: $e");
@@ -61,90 +63,102 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void dispose() {
     _scanController.dispose();
-    controller?.setFlashMode(FlashMode.off);
     controller?.dispose();
     super.dispose();
   }
 
-  // 📸 OPTION 1: Take picture with the custom camera
   Future<void> _takePicture() async {
     if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
     setState(() => isAnalyzing = true);
 
     try {
       final XFile image = await controller!.takePicture();
-      // 🌟 WEB SAFE FIX: Convert to bytes instead of File!
-      final imageBytes = await image.readAsBytes();
-      await _processImageWithGemini(imageBytes);
+      await _processWithBackend(image);
     } catch (e) {
       _handleError(e);
     }
   }
 
-  // 🖼️ OPTION 2: Pick from Gallery (Crucial for Web/Emulator demos)
   Future<void> _pickFromGallery() async {
     if (isAnalyzing) return;
 
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800);
 
       if (image != null) {
         setState(() => isAnalyzing = true);
-        final imageBytes = await image.readAsBytes();
-        await _processImageWithGemini(imageBytes);
+        await _processWithBackend(image);
       }
     } catch (e) {
       _handleError(e);
     }
   }
 
-  // 🤖 Central function to send to Gemini
-  Future<void> _processImageWithGemini(dynamic imageBytes) async {
+  Future<void> _processWithBackend(XFile image) async {
     try {
-      // ⚠️ IMPORTANT: Your GeminiService now needs to accept bytes!
-      final data = await GeminiService.identifyWaste(imageBytes);
+      await ref.read(scanControllerProvider.notifier).processImage(image);
 
       if (!mounted) return;
-
-      final pointsEarned = data['points'] ?? 0;
-      ref.read(pointsServiceProvider.notifier).addPoints(pointsEarned);
-
       setState(() => isAnalyzing = false);
 
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        barrierColor: Colors.black87,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-        ),
-        builder: (context) => SmartResultModal(data: data), // Ensure parameter name matches your modal
-      );
+      final scanState = ref.read(scanControllerProvider);
+
+      if (scanState.hasError) {
+        _handleError(scanState.error);
+        return;
+      }
+
+      if (scanState.hasValue && scanState.value != null) {
+        final ScanModel scan = scanState.value!;
+
+        final modalData = {
+          "itemName": scan.wasteType,
+          "category": scan.category,
+          "binColor": _getBinColor(scan.category),
+          "isRecyclable": scan.pointsEarned > 0,
+          "points": scan.pointsEarned,
+          "funFact": "Confidence: ${(scan.confidenceScore * 100).toInt()}% • CO2 Saved: ${scan.co2Saved}kg",
+        };
+
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.white,
+          barrierColor: Colors.black87,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          builder: (context) => SmartResultModal(data: modalData),
+        );
+      }
     } catch (e) {
       _handleError(e);
     }
+  }
+
+  String _getBinColor(String category) {
+    final cat = category.toLowerCase();
+    if (cat.contains("paper")) return "Blue";
+    if (cat.contains("plastic") || cat.contains("metal")) return "Orange";
+    if (cat.contains("glass")) return "Brown";
+    return "Black";
   }
 
   void _handleError(dynamic e) {
     debugPrint("Error in scan process: $e");
     if (!mounted) return;
     setState(() => isAnalyzing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: ${e.toString()}")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isCameraInitialized) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.green)),
-      );
+    if (!isCameraInitialized || controller == null) {
+      return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.green)));
     }
 
+    // 🌟 FULL UI RESTORED HERE
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -152,35 +166,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         children: [
           CameraPreview(controller!),
 
-          // Focus Overlay
           ColorFiltered(
-            colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.5),
-              BlendMode.srcOut,
-            ),
+            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.srcOut),
             child: Stack(
               children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent,
-                    backgroundBlendMode: BlendMode.dstOut,
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    width: 300,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
+                Container(decoration: const BoxDecoration(color: Colors.transparent, backgroundBlendMode: BlendMode.dstOut)),
+                Center(child: Container(width: 300, height: 300, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)))),
               ],
             ),
           ),
 
-          // Laser Animation
           if (!isAnalyzing)
             Center(
               child: SizedBox(
@@ -198,9 +193,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                           child: Container(
                             height: 4,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.green.withValues(alpha: 0), Colors.green, Colors.green.withValues(alpha: 0)],
-                              ),
+                              gradient: LinearGradient(colors: [Colors.green.withValues(alpha: 0), Colors.green, Colors.green.withValues(alpha: 0)]),
                               boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.6), blurRadius: 10, spreadRadius: 2)],
                             ),
                           ),
@@ -212,15 +205,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               ),
             ),
 
-          // Corner Guides
           Center(
             child: Container(
               width: 320,
               height: 320,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-                borderRadius: BorderRadius.circular(25),
-              ),
+              decoration: BoxDecoration(border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1), borderRadius: BorderRadius.circular(25)),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -231,7 +220,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             ),
           ),
 
-          // Analyzing Loader
           if (isAnalyzing)
             Container(
               color: Colors.black87,
@@ -241,23 +229,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                   children: [
                     CircularProgressIndicator(color: Colors.green, strokeWidth: 5),
                     SizedBox(height: 20),
-                    Text("Identifying Waste...", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text("Identifying Waste & Saving...", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
             ),
 
-          // Control Panel
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-              decoration: const BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
+              decoration: const BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -266,26 +248,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      IconButton(
-                        onPressed: _toggleFlash,
-                        icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off, color: isFlashOn ? Colors.amber : Colors.white, size: 30),
-                      ),
+                      IconButton(onPressed: _toggleFlash, icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off, color: isFlashOn ? Colors.amber : Colors.white, size: 30)),
                       GestureDetector(
                         onTap: isAnalyzing ? null : _takePicture,
                         child: Container(
-                          width: 80,
-                          height: 80,
+                          width: 80, height: 80,
                           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4), color: Colors.transparent),
-                          child: Center(
-                            child: Container(width: 65, height: 65, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-                          ),
+                          child: Center(child: Container(width: 65, height: 65, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
                         ),
                       ),
-                      // 🌟 FIXED GALLERY BUTTON!
-                      IconButton(
-                        onPressed: _pickFromGallery,
-                        icon: const Icon(Icons.photo_library, color: Colors.white, size: 30),
-                      ),
+                      IconButton(onPressed: _pickFromGallery, icon: const Icon(Icons.photo_library, color: Colors.white, size: 30)),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -302,8 +274,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     return RotationTransition(
       turns: AlwaysStoppedAnimation(angle / 360),
       child: Container(
-        width: 30,
-        height: 30,
+        width: 30, height: 30,
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.green, width: 4), left: BorderSide(color: Colors.green, width: 4)),
           borderRadius: BorderRadius.only(topLeft: Radius.circular(10)),

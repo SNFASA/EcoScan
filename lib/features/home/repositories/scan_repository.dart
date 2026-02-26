@@ -19,7 +19,7 @@ class ScanRepository {
     try {
       // Fetch the current user data to check the last recorded week
       final userDoc = await userRef.get();
-      
+
       WriteBatch batch = _firestore.batch();
 
       // 1. Save individual scan details
@@ -31,7 +31,7 @@ class ScanRepository {
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
         final String lastWeekId = data['lastScanWeekId'] ?? "";
-        
+
         // If the stored week ID matches the current scan's week ID, it's NOT a new week
         if (lastWeekId == scan.weekId) {
           isNewWeek = false;
@@ -63,7 +63,7 @@ class ScanRepository {
 
       // Commit all changes at once
       await batch.commit();
-      
+
     } catch (e) {
       // Log error for debugging
       print("Error saving scan and updating scoreboard: $e");

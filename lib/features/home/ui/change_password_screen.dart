@@ -81,7 +81,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                         const SizedBox(height: 20),
                         _buildPasswordField("Confirm New Password", _confirmPasswordController, isConfirm: true),
                         const SizedBox(height: 40),
-                        
+
                         // Action Buttons
                         Row(
                           children: [
@@ -105,9 +105,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                                   backgroundColor: Colors.orange,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                 ),
-                                child: _isLoading 
-                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                  : const Text("Update Password", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                child: _isLoading
+                                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                    : const Text("Update Password", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ),
                             ),
                           ],

@@ -1,1 +1,40 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ecoscan-aaa86","appId":"1:923392986981:android:999b69c0eea72a3f861b8c","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ecoscan-aaa86","configurations":{"android":"1:923392986981:android:999b69c0eea72a3f861b8c","ios":"1:923392986981:ios:8918dc9819494fa0861b8c","macos":"1:923392986981:ios:8918dc9819494fa0861b8c","web":"1:923392986981:web:e1f47c4bb9325c53861b8c","windows":"1:923392986981:web:50711477e5452c56861b8c"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ecoscan-aaa86",
+          "appId": "1:923392986981:android:999b69c0eea72a3f861b8c",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ecoscan-aaa86",
+          "configurations": {
+            "android": "1:923392986981:android:999b69c0eea72a3f861b8c",
+            "ios": "1:923392986981:ios:8918dc9819494fa0861b8c",
+            "macos": "1:923392986981:ios:8918dc9819494fa0861b8c",
+            "web": "1:923392986981:web:e1f47c4bb9325c53861b8c",
+            "windows": "1:923392986981:web:50711477e5452c56861b8c"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "site": "ecoscan",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
