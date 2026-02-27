@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../models/scan_model.dart';
 import '../repositories/scan_repository.dart';
 
@@ -16,7 +17,6 @@ final scanControllerProvider = AsyncNotifierProvider<ScanController, ScanModel?>
 });
 
 class ScanController extends AsyncNotifier<ScanModel?> {
-
   late final GenerativeModel _model;
 
   @override
@@ -24,7 +24,7 @@ class ScanController extends AsyncNotifier<ScanModel?> {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? "";
 
     _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash', // Flash models provide the lowest latency
       apiKey: apiKey,
       generationConfig: GenerationConfig(
         responseMimeType: 'application/json',
@@ -38,8 +38,17 @@ class ScanController extends AsyncNotifier<ScanModel?> {
     state = const AsyncLoading();
 
     try {
-      final Uint8List bytes = await image.readAsBytes();
       final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      // 1. 🚀 COMPRESS: Shrink image for faster network transfer
+      // This is the #1 speed fix for slow scans
+      final Uint8List compressedBytes = await FlutterImageCompress.compressWithFile(
+            image.path,
+            minWidth: 800, 
+            minHeight: 800,
+            quality: 70, 
+          ) ??
+          await image.readAsBytes();
 
       final prompt = TextPart("""
         Analyze this waste item. Return ONLY a JSON object with:
@@ -52,27 +61,24 @@ class ScanController extends AsyncNotifier<ScanModel?> {
         }
       """);
 
-      final content = [Content.multi([prompt, DataPart('image/jpeg', bytes)])];
+      final content = [Content.multi([prompt, DataPart('image/jpeg', compressedBytes)])];
 
-      // 🚀 SPEED FIX: Run Gemini AND Firebase Storage Upload at the exact same time
+      // 2. START ASYNC TASKS: Launch AI and Storage at the same time
       final geminiFuture = _model.generateContent(content);
-      final storageFuture = _uploadToStorage(bytes, uid);
+      final storageFuture = _uploadToStorage(compressedBytes, uid);
 
-      // Wait for both to finish before continuing
-      final results = await Future.wait([geminiFuture, storageFuture]);
+      // 3.UI SPEED: Wait only for the AI result first
+      // The user doesn't need the Storage URL to see the item name
+      final GenerateContentResponse response = await geminiFuture;
 
-      // Extract the results
-      final GenerateContentResponse response = results[0] as GenerateContentResponse;
-      final String downloadUrl = results[1] as String;
-
-      // Safe Regex Parsing
       final RegExp jsonRegExp = RegExp(r'\{[\s\S]*\}');
       final match = jsonRegExp.firstMatch(response.text ?? "{}");
       final jsonString = match?.group(0) ?? "{}";
-
       final Map<String, dynamic> data = jsonDecode(jsonString);
 
-      // Create the ScanModel
+      // 4.BACKGROUND URL: Finalize the storage upload
+      final String downloadUrl = await storageFuture;
+
       final scan = ScanModel(
         category: data['category'] ?? 'Unknown',
         co2Saved: (data['co2Saved'] as num?)?.toDouble() ?? 0.0,
@@ -84,10 +90,14 @@ class ScanController extends AsyncNotifier<ScanModel?> {
         weekId: _generateWeekId(),
       );
 
-      // Save to Firestore via Repository
-      await ref.read(scanRepositoryProvider).saveScan(scan);
-
+      // 5.FINISH: State updates immediately so the modal pops up in camera_screen.dart
       state = AsyncData(scan);
+
+      // 6.SILENT SAVE: Update database without blocking the UI
+      // We don't 'await' this so the user doesn't have to wait for the DB write
+      ref.read(scanRepositoryProvider).saveScan(scan).catchError((e) {
+        print("❌ Firestore Background Error: $e");
+      });
 
     } catch (e, stack) {
       print("❌ ScanController Error: $e");
@@ -95,7 +105,6 @@ class ScanController extends AsyncNotifier<ScanModel?> {
     }
   }
 
-  // Helper method to keep the main logic clean
   Future<String> _uploadToStorage(Uint8List bytes, String? uid) async {
     if (uid == null) return "";
     try {
@@ -109,7 +118,7 @@ class ScanController extends AsyncNotifier<ScanModel?> {
 
       return await uploadTask.ref.getDownloadURL();
     } catch (e) {
-      print("❌ Storage Upload Error: $e");
+      print("❌ Storage Error: $e");
       return "";
     }
   }

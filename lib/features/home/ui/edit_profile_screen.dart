@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controllers/user_controller.dart';
 import '../models/user_model.dart';
 
@@ -36,46 +37,57 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
-  // 📸 IMPROVED PICK IMAGE WITH MODAL BOTTOM SHEET
   Future<void> _pickImage() async {
     final XFile? image = await showModalBottomSheet<XFile?>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (_) => SafeArea(
-        child: Wrap(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text("Change Profile Photo", 
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.green),
-              title: const Text('Choose from Gallery'),
-              onTap: () async {
-                final result = await _picker.pickImage(
-                  source: ImageSource.gallery,
-                  imageQuality: 80,
-                );
-                if (mounted) Navigator.pop(context, result);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.green),
-              title: const Text('Take a Photo'),
-              onTap: () async {
-                final result = await _picker.pickImage(
-                  source: ImageSource.camera,
-                  imageQuality: 80,
-                );
-                if (mounted) Navigator.pop(context, result);
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: SafeArea(
+          child: Wrap(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                child: Text("Update Photo", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.photo_library, color: Colors.green),
+                ),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  final result = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (mounted) Navigator.pop(context, result);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.camera_alt, color: Colors.green),
+                ),
+                title: const Text('Take a Photo'),
+                onTap: () async {
+                  final result = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                  if (mounted) Navigator.pop(context, result);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -107,7 +119,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             profileUrl: newImageUrl,
           );
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile updated!"), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
@@ -116,159 +133,221 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F9F5),
-      body: Center(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFF4F9F5),
+    body: SingleChildScrollView(
+      child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildHeaderWithPreview(),
-                const SizedBox(height: 80),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      _buildEditField("Username", _nameController, Icons.person_outline),
-                      const SizedBox(height: 20),
-                      _buildEditField("Email Address", _emailController, Icons.email_outlined),
-                      const SizedBox(height: 40),
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isSaving ? null : () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                side: const BorderSide(color: Colors.grey),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 100),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    _buildEditField("Username", _nameController, Icons.person_outline),
+                    const SizedBox(height: 20),
+                    _buildEditField("Email Address", _emailController, Icons.email_outlined),
+                    const SizedBox(height: 40),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isSaving ? null : () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              side: const BorderSide(color: Colors.grey),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                              child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                             ),
+                            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
                           ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              onPressed: _isSaving ? null : _saveProfile,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isSaving ? null : _saveProfile,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              backgroundColor: const Color(0xFF1B5E20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                              child: _isSaving 
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text("Save Changes", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
+                            child: _isSaving
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Save Changes",
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 100),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
+    ),
+  );
+}
+
+Widget _buildHeader() {
+  ImageProvider? profileImage;
+  if (_pickedFile != null) {
+    profileImage = kIsWeb
+        ? NetworkImage(_pickedFile!.path)
+        : FileImage(File(_pickedFile!.path));
+  } else if (widget.user.profileurl.isNotEmpty) {
+    profileImage = NetworkImage(widget.user.profileurl);
   }
 
-  Widget _buildHeaderWithPreview() {
-    ImageProvider? profileImage;
-    if (_pickedFile != null) {
-      profileImage = kIsWeb ? NetworkImage(_pickedFile!.path) : FileImage(File(_pickedFile!.path)) as ImageProvider;
-    } else if (widget.user.profileurl.isNotEmpty) {
-      profileImage = NetworkImage(widget.user.profileurl);
-    }
-
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Container(
-          height: 280,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)]),
-            borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
+  return Stack(
+    clipBehavior: Clip.none,
+    alignment: Alignment.center,
+    children: [
+      Container(
+        height: 280,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: const Padding(
-            padding: EdgeInsets.only(top: 80, left: 30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Edit Profile", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                Text("Customize your warrior identity", style: TextStyle(color: Colors.white70, fontSize: 16)),
-              ],
-            ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(40),
+            bottomRight: Radius.circular(40),
           ),
         ),
-        Positioned(
-          bottom: -50,
-          child: Container(
-            width: 340,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.2), blurRadius: 20)],
+        child: Stack(
+          children: [
+            Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
+            Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+            Positioned(
+              top: 80,
+              left: 30,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "Profile",
+                    style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "Update your personal information",
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: profileImage,
-                        child: profileImage == null ? const Icon(Icons.person, size: 35) : null,
+          ],
+        ),
+      ),
+
+      /// Floating Card
+      Positioned(
+        bottom: -40,
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.all(25),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.green.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: const Color(0xFFE8F5E9),
+                      backgroundImage: profileImage,
+                      child: profileImage == null
+                          ? const Icon(Icons.person, color: Colors.green)
+                          : null,
+                    ),
+                    const Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.green,
+                        child: Icon(Icons.camera_alt, size: 12, color: Colors.white),
                       ),
-                      const Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.green,
-                          child: Icon(Icons.camera_alt, color: Colors.white, size: 12),
-                        ),
-                      )
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_nameController.text.isEmpty ? "Username" : _nameController.text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      Text(_emailController.text, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    ],
-                  ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Text(
+                  _nameController.text.isEmpty ? "Edit Profile" : _nameController.text,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildEditField(String label, TextEditingController controller, IconData icon) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
         prefixIcon: Icon(icon, color: Colors.green),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.green, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.white,
       ),
+    );
+  }
+
+  Widget _circleDeco(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }
