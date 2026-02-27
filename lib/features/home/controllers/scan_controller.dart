@@ -1,75 +1,116 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:camera/camera.dart';
 import '../models/scan_model.dart';
 import '../repositories/scan_repository.dart';
 
-// The Modern Notifier Provider
 final scanControllerProvider = AsyncNotifierProvider<ScanController, ScanModel?>(() {
   return ScanController();
 });
 
 class ScanController extends AsyncNotifier<ScanModel?> {
-  
-  // Replace with your actual Gemini API Key
-  final _model = GenerativeModel(
-    model: 'gemini-1.5-flash',
-    apiKey: 'YOUR_GEMINI_API_KEY',
-  );
+
+  late final GenerativeModel _model;
 
   @override
   FutureOr<ScanModel?> build() {
-    return null; // Initial state is null (no scan performed yet)
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? "";
+
+    _model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+      ),
+    );
+
+    return null;
   }
 
   Future<void> processImage(XFile image) async {
     state = const AsyncLoading();
 
     try {
-      final bytes = await image.readAsBytes();
-      
+      final Uint8List bytes = await image.readAsBytes();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
       final prompt = TextPart("""
         Analyze this waste item. Return ONLY a JSON object with:
         {
           "item": "name",
-          "category": "plastic/paper/metal/glass/organic/non-recyclable",
+          "category": "Plastic, Paper, Metal, Glass, Organic, or Non-recyclable",
           "confidence": 0.95,
           "co2Saved": 0.12,
           "points": 20
         }
       """);
 
-      final content = [
-        Content.multi([prompt, DataPart('image/jpeg', bytes)])
-      ];
+      final content = [Content.multi([prompt, DataPart('image/jpeg', bytes)])];
 
-      final response = await _model.generateContent(content);
-      final jsonString = response.text?.replaceAll('```json', '').replaceAll('```', '').trim();
-      
-      if (jsonString != null) {
-        final Map<String, dynamic> data = jsonDecode(jsonString);
-        
-        final scan = ScanModel(
-          category: data['category'],
-          co2Saved: (data['co2Saved'] as num).toDouble(),
-          confidenceScore: (data['confidence'] as num).toDouble(),
-          imageUrl: "", // Add Storage upload logic here later
-          pointsEarned: data['points'] as int,
-          timestamp: Timestamp.now(), // FIXED: Using Timestamp.now()
-          wasteType: data['item'],
-          weekId: _generateWeekId(),
-        );
+      // 🚀 SPEED FIX: Run Gemini AND Firebase Storage Upload at the exact same time
+      final geminiFuture = _model.generateContent(content);
+      final storageFuture = _uploadToStorage(bytes, uid);
 
-        // Save to Firestore via Repository
-        await ref.read(scanRepositoryProvider).saveScan(scan);
-        
-        state = AsyncData(scan);
-      }
+      // Wait for both to finish before continuing
+      final results = await Future.wait([geminiFuture, storageFuture]);
+
+      // Extract the results
+      final GenerateContentResponse response = results[0] as GenerateContentResponse;
+      final String downloadUrl = results[1] as String;
+
+      // Safe Regex Parsing
+      final RegExp jsonRegExp = RegExp(r'\{[\s\S]*\}');
+      final match = jsonRegExp.firstMatch(response.text ?? "{}");
+      final jsonString = match?.group(0) ?? "{}";
+
+      final Map<String, dynamic> data = jsonDecode(jsonString);
+
+      // Create the ScanModel
+      final scan = ScanModel(
+        category: data['category'] ?? 'Unknown',
+        co2Saved: (data['co2Saved'] as num?)?.toDouble() ?? 0.0,
+        confidenceScore: (data['confidence'] as num?)?.toDouble() ?? 0.0,
+        imageUrl: downloadUrl,
+        pointsEarned: data['points'] as int? ?? 0,
+        timestamp: Timestamp.now(),
+        wasteType: data['item'] ?? 'Unknown Item',
+        weekId: _generateWeekId(),
+      );
+
+      // Save to Firestore via Repository
+      await ref.read(scanRepositoryProvider).saveScan(scan);
+
+      state = AsyncData(scan);
+
     } catch (e, stack) {
+      print("❌ ScanController Error: $e");
       state = AsyncError(e, stack);
+    }
+  }
+
+  // Helper method to keep the main logic clean
+  Future<String> _uploadToStorage(Uint8List bytes, String? uid) async {
+    if (uid == null) return "";
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storageRef = FirebaseStorage.instance.ref().child('users/$uid/scans/$fileName');
+
+      final uploadTask = await storageRef.putData(
+        bytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      return await uploadTask.ref.getDownloadURL();
+    } catch (e) {
+      print("❌ Storage Upload Error: $e");
+      return "";
     }
   }
 
