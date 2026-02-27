@@ -6,18 +6,21 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:geolocator/geolocator.dart';
 import '../controllers/centers_controller.dart';
 import '../models/recycleingcenter_model.dart';
 
 class CentersScreen extends ConsumerWidget {
   const CentersScreen({super.key});
-
+  String _getDistance(double startLat, double startLng, double endLat, double endLng) {
+    double distanceInMeters = Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
+    double distanceInKm = distanceInMeters / 1000;
+    return "${distanceInKm.toStringAsFixed(1)} km";
+  }
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final centersAsync = ref.watch(centersProvider);
     final controller = ref.read(centersProvider.notifier);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
       body: SingleChildScrollView(
@@ -236,7 +239,17 @@ class CentersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCenterCard(BuildContext context, RecyclingCenterModel center, CentersController controller) {
+ Widget _buildCenterCard(BuildContext context, RecyclingCenterModel center, CentersController controller) {
+    // Calculate the real distance using the controller's current location
+    final String realDistance = center.location != null 
+        ? _getDistance(
+            controller.currentLat, 
+            controller.currentLng, 
+            center.location!.latitude, 
+            center.location!.longitude
+          )
+        : "N/A";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -268,9 +281,14 @@ class CentersScreen extends ConsumerWidget {
                     children: [
                       const Icon(Icons.location_on_rounded, color: Colors.green, size: 28),
                       const SizedBox(height: 4),
-                      const Text("0.8 km",
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold)),
+                      // 🌟 REAL DATA REPLACING "0.8 km"
+                      Text(
+                        realDistance,
+                        style: const TextStyle(
+                            fontSize: 10, 
+                            color: Colors.blue, 
+                            fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),

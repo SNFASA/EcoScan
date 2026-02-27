@@ -13,6 +13,8 @@ final centersProvider = AsyncNotifierProvider<CentersController, List<RecyclingC
 });
 
 class CentersController extends AsyncNotifier<List<RecyclingCenterModel>> {
+  double get currentLat => _currentLat;
+  double get currentLng => _currentLng;
   String selectedCategory = "All";
   GoogleMapController? mapController;
 
