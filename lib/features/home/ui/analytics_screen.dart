@@ -1,12 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import '../controllers/analytics_controller.dart';
 import '../controllers/user_controller.dart';
 import '../models/user_model.dart';
+import 'globalDashboard_screen.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
+
+  /// 🌟 Navigation & Tracking Logic
+  Future<void> _navigateToGlobalStats(BuildContext context) async {
+    // 1. Log the event to Google Analytics
+    await FirebaseAnalytics.instance.logEvent(
+      name: 'view_global_stats',
+      parameters: {
+        'from_screen': 'personal_analytics',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+
+    // 2. Perform Navigation
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const GlobalDashboardScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +49,7 @@ class AnalyticsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   // HEADER SECTION
-                  _buildHeaderSection(user, screenWidth),
+                  _buildHeaderSection(context, user, screenWidth),
                   
                   const SizedBox(height: 80),
                   Padding(
@@ -73,8 +95,7 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // --- UPDATED HEADER SECTION (MATCHES YOUR REQUESTED STYLE) ---
-  Widget _buildHeaderSection(UserModel user, double screenWidth) {
+  Widget _buildHeaderSection(BuildContext context, UserModel user, double screenWidth) {
     int trees = (user.co2Offset / 21).floor();
 
     return Stack(
@@ -100,6 +121,17 @@ class AnalyticsScreen extends ConsumerWidget {
             children: [
               Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
               Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
+              
+              // 🌟 NEW: Global Navigation Icon
+              Positioned(
+                top: 50,
+                right: 20,
+                child: IconButton(
+                  onPressed: () => _navigateToGlobalStats(context),
+                  icon: const Icon(Icons.public_rounded, color: Colors.white, size: 28),
+                ),
+              ),
+
               Positioned(
                 top: 60,
                 left: 0,
@@ -129,7 +161,7 @@ class AnalyticsScreen extends ConsumerWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
-                BoxShadow(color: Colors.green.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
               ],
             ),
             child: Row(
@@ -187,30 +219,29 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildChartList(Map<String, double> data) {
-  // DEFECT FIX: If there is no data or total is zero, show a friendly message
-  final total = data.values.fold(0.0, (sum, val) => sum + val);
+    final total = data.values.fold(0.0, (sum, val) => sum + val);
 
-  if (data.isEmpty || total == 0) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 40),
-      child: Center(
-        child: Text("No recycling data found for this period.", 
-          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-      ),
+    if (data.isEmpty || total == 0) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Text("No recycling data found for this period.", 
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+        ),
+      );
+    }
+    
+    return Column(
+      children: data.entries.map((e) {
+        return _buildImpactBar(
+          e.key, 
+          e.value / total, 
+          _getCategoryColor(e.key), 
+          _getCategoryIcon(e.key),
+        );
+      }).toList(),
     );
   }
-  
-  return Column(
-    children: data.entries.map((e) {
-      return _buildImpactBar(
-        e.key, 
-        e.value / total, // Now safe because total > 0
-        _getCategoryColor(e.key), 
-        _getCategoryIcon(e.key),
-      );
-    }).toList(),
-  );
-}
 
   Widget _buildMilestoneCard(double current, double target) {
     double progress = (target > 0) ? (current / target).clamp(0.0, 1.0) : 0.0;

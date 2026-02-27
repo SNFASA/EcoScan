@@ -239,8 +239,8 @@ Widget _buildHeader() {
         ),
         child: Stack(
           children: [
-            Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-            Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+            Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+            Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
             Positioned(
               top: 80,
               left: 30,

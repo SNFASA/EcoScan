@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // 🌟 Required for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,9 +38,21 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     try {
       _cameras = await availableCameras();
       if (_cameras != null && _cameras!.isNotEmpty) {
-        // 🚀 SPEED FIX: Changed to medium resolution for faster processing
-        controller = CameraController(_cameras![0], ResolutionPreset.medium, enableAudio: false);
+
+        // 🌟 SMART CAMERA SELECTION: Try to grab the back camera for mobile web
+        CameraDescription? selectedCamera;
+        for (var camera in _cameras!) {
+          if (camera.lensDirection == CameraLensDirection.back) {
+            selectedCamera = camera;
+            break;
+          }
+        }
+        // Fallback to the first available camera (usually laptop webcam)
+        selectedCamera ??= _cameras!.first;
+
+        controller = CameraController(selectedCamera, ResolutionPreset.medium, enableAudio: false);
         await controller!.initialize();
+
         if (!mounted) return;
         setState(() => isCameraInitialized = true);
       }
@@ -49,7 +62,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   }
 
   Future<void> _toggleFlash() async {
-    if (controller == null || !controller!.value.isInitialized) return;
+    // Note: Flash mode is often unsupported on Web browsers, so we add a check
+    if (controller == null || !controller!.value.isInitialized || kIsWeb) return;
     try {
       isFlashOn = !isFlashOn;
       await controller!.setFlashMode(isFlashOn ? FlashMode.torch : FlashMode.off);
@@ -67,6 +81,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     super.dispose();
   }
 
+  // 📸 Works for both Native and Web now!
   Future<void> _takePicture() async {
     if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
     setState(() => isAnalyzing = true);
@@ -81,10 +96,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   Future<void> _pickFromGallery() async {
     if (isAnalyzing) return;
-
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800);
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+      );
 
       if (image != null) {
         setState(() => isAnalyzing = true);
@@ -158,24 +177,41 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.green)));
     }
 
-    // 🌟 FULL UI RESTORED HERE
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // 📷 1. The Live Camera Feed (Now works on Web!)
           CameraPreview(controller!),
 
-          ColorFiltered(
-            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.srcOut),
-            child: Stack(
-              children: [
-                Container(decoration: const BoxDecoration(color: Colors.transparent, backgroundBlendMode: BlendMode.dstOut)),
-                Center(child: Container(width: 300, height: 300, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)))),
-              ],
+          // 🎨 2. The Overlay Fix
+          if (!kIsWeb) ...[
+            // Native Devices get the cool "Hole Punch" effect
+            ColorFiltered(
+              colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.srcOut),
+              child: Stack(
+                children: [
+                  Container(decoration: const BoxDecoration(color: Colors.transparent, backgroundBlendMode: BlendMode.dstOut)),
+                  Center(child: Container(width: 300, height: 300, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)))),
+                ],
+              ),
             ),
-          ),
+          ] else ...[
+            // Web browsers get a safe, semi-transparent border that doesn't break HTML video
+            Container(color: Colors.black.withOpacity(0.3)),
+            Center(
+              child: Container(
+                width: 300, height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ],
 
+          // 🟢 3. The Scanning Laser Animation
           if (!isAnalyzing)
             Center(
               child: SizedBox(
@@ -188,8 +224,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                       children: [
                         Positioned(
                           top: _scanController.value * 280,
-                          left: 0,
-                          right: 0,
+                          left: 0, right: 0,
                           child: Container(
                             height: 4,
                             decoration: BoxDecoration(
@@ -205,11 +240,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               ),
             ),
 
+          // 📐 4. The Corner Brackets
           Center(
             child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1), borderRadius: BorderRadius.circular(25)),
+              width: 320, height: 320,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(25)),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -220,6 +255,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             ),
           ),
 
+          // ⏳ 5. Loading State
           if (isAnalyzing)
             Container(
               color: Colors.black87,
@@ -235,6 +271,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               ),
             ),
 
+          // 🔘 6. Bottom Controls
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
@@ -248,7 +285,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      IconButton(onPressed: _toggleFlash, icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off, color: isFlashOn ? Colors.amber : Colors.white, size: 30)),
+                      // Hide flash on web since it's rarely supported
+                      if (!kIsWeb)
+                        IconButton(onPressed: _toggleFlash, icon: Icon(isFlashOn ? Icons.flash_on : Icons.flash_off, color: isFlashOn ? Colors.amber : Colors.white, size: 30))
+                      else
+                        const SizedBox(width: 48), // Spacer to keep shutter button centered
+
                       GestureDetector(
                         onTap: isAnalyzing ? null : _takePicture,
                         child: Container(
