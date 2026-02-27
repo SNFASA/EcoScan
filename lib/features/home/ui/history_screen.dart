@@ -26,13 +26,13 @@ class HistoryScreen extends ConsumerWidget {
           data: (scans) {
             final todayCount = ref.read(scanHistoryProvider.notifier).getTodayScanCount(scans);
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1000),
-                child: SingleChildScrollView(
+            return SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
                   child: Column(
                     children: [
-                      // Updated Header Section with proper parameters
+                      // Refined Header Section
                       _buildHeaderSection(
                         user.ecoPoints, 
                         user.totalScans, 
@@ -46,18 +46,23 @@ class HistoryScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Scanning History",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Recent Activity",
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  "${scans.length} total scans",
+                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 15),
                             
-                            // The Real-time List
                             if (scans.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(child: Text("No scans recorded yet.", style: TextStyle(color: Colors.grey))),
-                              )
+                              _buildEmptyState()
                             else
                               ListView.builder(
                                 shrinkWrap: true,
@@ -66,7 +71,7 @@ class HistoryScreen extends ConsumerWidget {
                                 itemBuilder: (context, index) => _buildHistoryItem(context, scans[index]),
                               ),
                             
-                            const SizedBox(height: 100),
+                            const SizedBox(height: 40),
                           ],
                         ),
                       ),
@@ -81,49 +86,80 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Column(
+        children: [
+          Icon(Icons.history_rounded, size: 80, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          const Text("No scans recorded yet.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+          const Text("Start scanning to save the planet!", style: TextStyle(color: Colors.grey, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHistoryItem(BuildContext context, ScanModel scan) {
     final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(scan.timestamp.toDate());
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _showScanDetails(context, scan),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03), 
-                blurRadius: 10, 
-                offset: const Offset(0, 4)
-              )
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1), 
-                  shape: BoxShape.circle
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withValues(alpha: 0.05), 
+            blurRadius: 15, 
+            offset: const Offset(0, 5)
+          )
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showScanDetails(context, scan),
+          borderRadius: BorderRadius.circular(25),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1), 
+                    borderRadius: BorderRadius.circular(15)
+                  ),
+                  child: const Icon(Icons.recycling_rounded, color: Colors.green, size: 28),
                 ),
-                child: const Icon(Icons.history_edu_rounded, color: Colors.green),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(scan.wasteType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                      const SizedBox(height: 4),
+                      Text(dateStr, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(scan.wasteType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(dateStr, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    Text(
+                      "+${scan.pointsEarned} pts", 
+                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)
+                    ),
+                    Text(
+                      scan.category, 
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12)
+                    ),
                   ],
                 ),
-              ),
-              Text("+${scan.pointsEarned} pts", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -131,38 +167,50 @@ class HistoryScreen extends ConsumerWidget {
   }
 
   void _showScanDetails(BuildContext context, ScanModel scan) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Text(scan.wasteType.toUpperCase(), textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.all(25),
+        child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: scan.imageUrl.isNotEmpty 
-                ? Image.network(scan.imageUrl, height: 200, width: double.infinity, fit: BoxFit.cover)
-                : Container(height: 200, color: Colors.grey[200], child: const Icon(Icons.image)),
-            ),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(20))),
             const SizedBox(height: 20),
-            _popupRow("Category", scan.category),
-            _popupRow("CO2 Saved", "${scan.co2Saved} kg"),
-            _popupRow("Confidence", "${(scan.confidenceScore * 100).toInt()}%"),
+            Text(scan.wasteType.toUpperCase(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: scan.imageUrl.isNotEmpty 
+                ? Image.network(scan.imageUrl, height: 250, width: double.infinity, fit: BoxFit.cover)
+                : Container(height: 250, color: Colors.grey[100], child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey)),
+            ),
+            const SizedBox(height: 30),
+            _detailRow(Icons.category_outlined, "Category", scan.category),
+            _detailRow(Icons.eco_outlined, "CO₂ Saved", "${scan.co2Saved} kg"),
+            _detailRow(Icons.verified_outlined, "Confidence", "${(scan.confidenceScore * 100).toInt()}%"),
+            _detailRow(Icons.stars_rounded, "Eco Points", "+${scan.pointsEarned}"),
           ],
         ),
       ),
     );
   }
 
-  Widget _popupRow(String label, String value) {
+  Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Icon(icon, color: Colors.green, size: 22),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ],
       ),
     );
@@ -173,7 +221,6 @@ class HistoryScreen extends ConsumerWidget {
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // 🟩 The Green Gradient Header
         Container(
           height: 280,
           width: double.infinity,
@@ -192,31 +239,24 @@ class HistoryScreen extends ConsumerWidget {
             children: [
               Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withAlpha(25))),
               Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withAlpha(13))),
-
               Padding(
                 padding: const EdgeInsets.only(top: 80, left: 30, right: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "History", 
-                      style: TextStyle(color: Colors.white70, fontSize: 16)
-                    ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      "Your journey to a greener Earth 🌿", 
-                      style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)
-                    ),
-                    const SizedBox(height: 15),
+                    const Text("Eco Tracking", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    const Text("Scan History", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(30),
+                        color: Colors.white.withAlpha(40),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        "Level: $rank",
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        "Current Rank: $rank",
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -225,19 +265,17 @@ class HistoryScreen extends ConsumerWidget {
             ],
           ),
         ),
-
-        // ☁️ The Overlapping Floating Card (Stats)
         Positioned(
-          bottom: -50,
+          bottom: -40,
           child: Container(
-            width: screenWidth > 600 ? 500 : 340,
-            padding: const EdgeInsets.all(25),
+            width: screenWidth > 600 ? 400 : 340,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 25),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withValues(alpha: 0.2), 
+                  color: Colors.green.withValues(alpha: 0.15), 
                   blurRadius: 20, 
                   offset: const Offset(0, 10)
                 )
@@ -246,11 +284,21 @@ class HistoryScreen extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.eco, color: Colors.green),
-                const SizedBox(width: 10),
-                Text(
-                  "Today's Scans: $count", 
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.bolt_rounded, color: Colors.green),
+                ),
+                const SizedBox(width: 15),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Today's Progress", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    Text(
+                      "$count Items Scanned", 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+                    ),
+                  ],
                 ),
               ],
             ),

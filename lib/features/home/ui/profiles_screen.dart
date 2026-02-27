@@ -20,36 +20,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   File? _pickedImage;
   final ImagePicker _picker = ImagePicker();
 
-
   Future<void> _pickImage() async {
     final picked = await showModalBottomSheet<XFile?>(
       context: context,
-      builder: (_) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
-              onTap: () async {
-                final image = await _picker.pickImage(
-                  source: ImageSource.gallery,
-                  imageQuality: 80,
-                );
-                if (mounted) Navigator.pop(context, image);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
-              onTap: () async {
-                final image = await _picker.pickImage(
-                  source: ImageSource.camera,
-                  imageQuality: 80,
-                );
-                if (mounted) Navigator.pop(context, image);
-              },
-            ),
-          ],
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        child: SafeArea(
+          child: Wrap(
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Container(
+                    width: 40, 
+                    height: 4, 
+                    decoration: const BoxDecoration(
+                      color: Colors.black12, 
+                      borderRadius: BorderRadius.all(Radius.circular(10))
+                    )
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.green),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (mounted) Navigator.pop(context, image);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.green),
+                title: const Text('Take a Photo'),
+                onTap: () async {
+                  final image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                  if (mounted) Navigator.pop(context, image);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -66,28 +80,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final firebaseUser = FirebaseAuth.instance.currentUser;
 
     if (firebaseUser == null) {
-      return const Scaffold(
-        body: Center(child: Text("User not logged in")),
-      );
+      return const Scaffold(body: Center(child: Text("User not logged in")));
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
       body: ref.watch(userControllerProvider(firebaseUser.uid)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: CircularProgressIndicator(color: Colors.green)),
             error: (e, _) => Center(child: Text("Error: $e")),
             data: (user) => SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
                   child: Column(
                     children: [
+                      // FIXED: Removed 'const' from here because 'user' is dynamic
                       _buildHeaderAndFloatingCard(context, user),
-                      const SizedBox(height: 80),
-                      _buildStatsSection(user),
-                      const SizedBox(height: 32),
-                      _buildActionButtons(user),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 100),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("Eco Statistics", 
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(height: 16),
+                            _buildStatsSection(user),
+                            const SizedBox(height: 40),
+                            const Text("Account Settings", 
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(height: 16),
+                            _buildActionButtons(user),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 60),
                     ],
                   ),
                 ),
@@ -97,16 +125,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ================= HEADER =================
   Widget _buildHeaderAndFloatingCard(BuildContext context, dynamic user) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withAlpha(25))),
-        Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withAlpha(13))),
         Container(
-          height: 280,
+          height: 260,
           width: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -115,64 +140,64 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
+              bottomLeft: Radius.circular(50),
+              bottomRight: Radius.circular(50),
             ),
           ),
           child: Stack(
-            children:[
+            children: [
               Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
               Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
-              Positioned(
-                top: 60,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    const Text("Profile", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
-                  ],
+              const SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 20),
+                    child: Text("My Eco Profile", 
+                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                  ),
                 ),
-              ),  
+              ),
             ],
           ),
         ),
-
         Positioned(
-          bottom: -70,
+          bottom: -80,
           child: Container(
-            width: 340,
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(25),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 30,
+                  offset: const Offset(0, 15),
                 ),
               ],
             ),
             child: Column(
               children: [
                 Stack(
+                  alignment: Alignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _pickedImage != null
-                          ? FileImage(_pickedImage!)
-                          : (user.profileurl != null &&
-                                  user.profileurl.isNotEmpty)
-                              ? NetworkImage(user.profileurl)
-                              : null,
-                      child: (_pickedImage == null &&
-                              (user.profileurl == null ||
-                                  user.profileurl.isEmpty))
-                          ? const Icon(Icons.person,
-                              size: 45, color: Colors.grey)
-                          : null,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey[100],
+                        backgroundImage: _pickedImage != null
+                            ? FileImage(_pickedImage!)
+                            : (user.profileurl != null && user.profileurl.isNotEmpty)
+                                ? NetworkImage(user.profileurl)
+                                : null,
+                        child: (_pickedImage == null && (user.profileurl == null || user.profileurl.isEmpty))
+                            ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                            : null,
+                      ),
                     ),
                     Positioned(
                       bottom: 0,
@@ -180,13 +205,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: GestureDetector(
                         onTap: _pickImage,
                         child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.green, width: 2),
                           ),
-                          child: const Icon(Icons.edit,
-                              size: 16, color: Colors.white),
+                          child: const Icon(Icons.camera_alt, size: 18, color: Colors.green),
                         ),
                       ),
                     ),
@@ -194,20 +219,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 15),
                 Text(user.username,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 8),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 6),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(user.rankTier,
-                      style: const TextStyle(
-                          color: Colors.green, fontWeight: FontWeight.w600)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.emoji_events, color: Colors.green, size: 16),
+                      const SizedBox(width: 6),
+                      Text(user.rankTier,
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -217,161 +245,131 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ================= STATS =================
   Widget _buildStatsSection(dynamic user) {
-    final stats = [
-      _statCard("Eco Points", user.ecoPoints.toString(), Icons.stars, Colors.amber),
-      _statCard("Weekly Points", user.weeklyPoints.toString(), Icons.auto_graph, Colors.green),
-      _statCard("Total Scans", user.totalScans.toString(), Icons.recycling, Colors.teal),
-      _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(2)} kg", Icons.eco, Colors.lightGreen),
-      _statCard("Rank", user.rankTier, Icons.emoji_events, Colors.orange),
-      _statCard("Streak", "${user.streak} days", Icons.whatshot, Colors.redAccent),
-    ];
-
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      alignment: WrapAlignment.center,
-      children: stats,
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.4,
+      children: [
+        _statCard("Eco Points", user.ecoPoints.toString(), Icons.stars, Colors.amber),
+        _statCard("Weekly", user.weeklyPoints.toString(), Icons.auto_graph, Colors.green),
+        _statCard("Scans", user.totalScans.toString(), Icons.recycling, Colors.teal),
+        _statCard("CO₂ Offset", "${user.co2Offset.toStringAsFixed(1)}kg", Icons.eco, Colors.lightGreen),
+        _statCard("Streak", "${user.streak}d", Icons.whatshot, Colors.redAccent),
+        _statCard("Level", user.rankTier.split(' ')[0], Icons.bolt, Colors.orange),
+      ],
     );
   }
 
   Widget _statCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: color.withValues(alpha: 0.1),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Text(title, style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(UserModel user) {
+    return Column(
+      children: [
+        _fullWidthButton(
+          icon: Icons.person_outline,
+          label: "Edit Profile Details",
+          color: Colors.green,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen(user: user))),
+        ),
+        const SizedBox(height: 12),
+        _fullWidthButton(
+          icon: Icons.lock_outline,
+          label: "Change Password",
+          color: Colors.orange,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+        ),
+        const SizedBox(height: 12),
+        _fullWidthButton(
+          icon: Icons.logout_rounded,
+          label: "Log Out",
+          color: Colors.redAccent,
+          isOutlined: true,
+          onTap: () async {
+            final confirm = await _showConfirmLogout();
+            if (confirm == true) {
+              await ref.read(authProvider.notifier).logout();
+              if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _fullWidthButton({required IconData icon, required String label, required Color color, required VoidCallback onTap, bool isOutlined = false}) {
     return SizedBox(
-      width: 220,
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.2),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                  ],
-                ),
-              ),
-            ],
+      width: double.infinity,
+      child: isOutlined 
+      ? OutlinedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, size: 20),
+          label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: color,
+            side: BorderSide(color: color),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          ),
+        )
+      : ElevatedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, color: Colors.white, size: 20),
+          label: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           ),
         ),
+    );
+  }
+
+  Future<bool?> _showConfirmLogout() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Logout?'),
+        content: const Text('Are you sure you want to leave? Your eco-progress is saved!'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
 
-  // ================= BUTTONS =================
-  Widget _buildActionButtons(UserModel user) { // Use the specific model type
-  return Wrap(
-    spacing: 20,
-    runSpacing: 16,
-    alignment: WrapAlignment.center,
-    children: [
-      // 1. Edit Profile Button
-      _actionButton(
-        icon: Icons.edit,
-        label: "Edit Profile",
-        color: Colors.green,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              // Pass the 'user' object directly from the parameter
-              builder: (context) => EditProfileScreen(user: user), 
-            ),
-          );
-        },
-      ),
-
-      // 2. Change Password Button
-      _actionButton(
-        icon: Icons.lock,
-        label: "Change Password",
-        color: Colors.orange,
-        onTap: () => Navigator.push(
-          context, 
-          MaterialPageRoute(builder: (_) => const ChangePasswordScreen())
-        ),
-      ),
-
-      // 3. Logout Button
-      _actionButton(
-        icon: Icons.logout,
-        label: "Logout",
-        color: Colors.redAccent,
-        width: 200, // Matching your desktop style
-        onTap: () async {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Logout'),
-              content: const Text('Are you sure you want to logout?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Logout'),
-                ),
-              ],
-            ),
-          );
-
-          if (confirm == true) {
-            await ref.read(authProvider.notifier).logout();
-            if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
-            }
-          }
-        },
-      ),
-    ],
-  );
-}
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    double width = 180,
-  }) {
-    return SizedBox(
-      width: width,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(label, style: const TextStyle(color: Colors.white)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
-        ),
-      ),
-    );
-  }
   Widget _circleDeco(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
+    return Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: color));
   }
 }

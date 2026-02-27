@@ -60,17 +60,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F9F5),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
-          child: SingleChildScrollView(
+      backgroundColor: const Color(0xFFF4F9F5), // Same as ProfileScreen
+      body: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
                   _buildHeader(),
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 100), // Adjusted for floating card alignment
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
@@ -90,6 +90,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                                 onPressed: () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 18),
+                                  side: const BorderSide(color: Colors.grey),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                 ),
                                 child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
@@ -97,12 +98,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                             ),
                             const SizedBox(width: 15),
                             Expanded(
-                              flex: 2,
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _handleChangePassword,
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 18),
-                                  backgroundColor: Colors.orange,
+                                  backgroundColor: const Color(0xFF1B5E20), // Dark Green
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                 ),
                                 child: _isLoading
@@ -126,47 +126,71 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      height: 280,
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [Color(0xFFE65100), Color(0xFFFF9800)]),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(top: 80, left: 30, child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text("Security", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-              Text("Keep your EcoScan account safe", style: TextStyle(color: Colors.white70, fontSize: 16)),
-            ],
-          )),
-          Positioned(
-            bottom: -40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 340,
-                padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha: 0.2), blurRadius: 20)],
-                ),
-                child: Row(
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Container(
+          height: 280,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)], // Matching Profile Green
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(40),
+              bottomRight: Radius.circular(40),
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
+              Positioned(
+                top: 80,
+                left: 30,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    CircleAvatar(backgroundColor: Color(0xFFFFF3E0), child: Icon(Icons.lock_reset, color: Colors.orange)),
-                    SizedBox(width: 15),
-                    Text("Change Password", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text("Security", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    Text("Keep your EcoScan account safe", style: TextStyle(color: Colors.white70, fontSize: 16)),
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: -40,
+          child: Container(
+            width: 340,
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              children: const [
+                CircleAvatar(
+                  backgroundColor: Color(0xFFE8F5E9), // Light Green background
+                  child: Icon(Icons.lock_reset, color: Colors.green),
+                ),
+                SizedBox(width: 15),
+                Text("Change Password", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -176,12 +200,20 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       obscureText: _obscureText,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: const Icon(Icons.lock_outline, color: Colors.orange),
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: const Icon(Icons.lock_outline, color: Colors.green),
         suffixIcon: IconButton(
           icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
           onPressed: () => setState(() => _obscureText = !_obscureText),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.green, width: 2),
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -191,6 +223,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         if (isConfirm && value != _newPasswordController.text) return "Passwords do not match";
         return null;
       },
+    );
+  }
+
+  Widget _circleDeco(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }

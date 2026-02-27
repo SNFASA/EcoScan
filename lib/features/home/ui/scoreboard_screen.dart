@@ -14,38 +14,47 @@ class ScoreboardScreen extends ConsumerWidget {
     final String? currentUid = firebaseAuth.currentUser?.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F9F5),
+      backgroundColor: const Color(0xFFF4F9F5), // Standard EcoScan background
       body: scoreboardAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: Colors.green),
         ),
         error: (e, s) {
           debugPrint("Leaderboard Error: $e");
-          debugPrint("Stack: $s");
-          return Center(
-            child: Text("Error: $e"),
-          );
+          return Center(child: Text("Error loading data: $e"));
         },
         data: (leaderboard) {
           if (leaderboard.isEmpty) {
-            return const Center(child: Text("No data found"));
+            return const Center(child: Text("No eco-heroes yet!"));
           }
 
-          final topThree =
-          leaderboard.length >= 3 ? leaderboard.sublist(0, 3) : leaderboard;
-          final theRest =
-          leaderboard.length > 3 ? leaderboard.sublist(3) : [];
+          final topThree = leaderboard.length >= 3 ? leaderboard.sublist(0, 3) : leaderboard;
+          final theRest = leaderboard.length > 3 ? leaderboard.sublist(3) : [];
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: SingleChildScrollView(
+          return SingleChildScrollView(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
                 child: Column(
                   children: [
+                    // Enhanced Header with Podium
                     _buildHeaderSection(topThree, currentUid),
                     const SizedBox(height: 80),
 
-                    // 🌟 UPGRADED: ListView.builder for butter-smooth scrolling
+                    // Ranking List Header
+                    if (theRest.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Top Contributors",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ),
+                      ),
+
+                    // Refined Ranking List
                     if (theRest.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -57,68 +66,7 @@ class ScoreboardScreen extends ConsumerWidget {
                             final user = theRest[index];
                             final rank = index + 4;
                             final isMe = user.id == currentUid;
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isMe ? Colors.green.shade50 : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: isMe ? Border.all(color: Colors.green, width: 2) : null,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.03),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                                  leading: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        "#$rank",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: isMe ? Colors.green[800] : Colors.grey[500]),
-                                      ),
-                                      const SizedBox(width: 15),
-                                      CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: isMe ? Colors.green : Colors.grey[100],
-                                        backgroundImage: user.profileurl.isNotEmpty
-                                            ? NetworkImage(user.profileurl)
-                                            : null,
-                                        child: user.profileurl.isEmpty
-                                            ? Text(
-                                          _getInitials(user.username),
-                                          style: TextStyle(
-                                              color: isMe ? Colors.white : Colors.black87,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12),
-                                        )
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                  title: Text(
-                                    user.username,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isMe ? Colors.green[900] : Colors.black87),
-                                  ),
-                                  trailing: Text(
-                                    "${user.weeklyPoints} pts",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isMe ? Colors.green[800] : Colors.green[700]),
-                                  ),
-                                ),
-                              ),
-                            );
+                            return _buildRankItem(user, rank, isMe);
                           },
                         ),
                       ),
@@ -133,7 +81,73 @@ class ScoreboardScreen extends ConsumerWidget {
     );
   }
 
-  // ================= HEADER SECTION =================
+  // ================= RANK ITEM COMPONENT =================
+
+  Widget _buildRankItem(UserModel user, int rank, bool isMe) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: isMe ? Border.all(color: Colors.green.withValues(alpha: 0.5), width: 2) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: SizedBox(
+          width: 80,
+          child: Row(
+            children: [
+              Text(
+                "#$rank",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isMe ? Colors.green : Colors.grey[400],
+                ),
+              ),
+              const Spacer(),
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.grey[100],
+                backgroundImage: user.profileurl.isNotEmpty ? NetworkImage(user.profileurl) : null,
+                child: user.profileurl.isEmpty
+                    ? Text(_getInitials(user.username), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        title: Text(
+          user.username,
+          style: TextStyle(
+            fontWeight: isMe ? FontWeight.bold : FontWeight.w600,
+            color: isMe ? Colors.green[900] : Colors.black87,
+          ),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              "${user.weeklyPoints} pts",
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 15),
+            ),
+            if (isMe)
+              const Text("YOU", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= HEADER & PODIUM =================
 
   Widget _buildHeaderSection(List<UserModel> topThree, String? currentUid) {
     return Stack(
@@ -141,7 +155,7 @@ class ScoreboardScreen extends ConsumerWidget {
       alignment: Alignment.center,
       children: [
         Container(
-          height: 280,
+          height: 300,
           width: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -150,61 +164,47 @@ class ScoreboardScreen extends ConsumerWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
+              bottomLeft: Radius.circular(45),
+              bottomRight: Radius.circular(45),
             ),
           ),
           child: Stack(
             children: [
-              Positioned(
-                  top: -50,
-                  right: -50,
-                  child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
-              Positioned(
-                  top: 50,
-                  left: -20,
-                  child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
+              Positioned(top: -40, right: -40, child: _circleDeco(180, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 60, left: -30, child: _circleDeco(120, Colors.white.withValues(alpha: 0.05))),
               const Positioned(
-                top: 50,
+                top: 70,
                 left: 0,
                 right: 0,
-                child: Center(
-                  child: Column(
-                    children: [
-                      Text("Leaderboard",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold)),
-                      SizedBox(height: 5),
-                      Text("Weekly Top Heroes 🏆",
-                          style: TextStyle(color: Colors.white70, fontSize: 14)),
-                    ],
-                  ),
+                child: Column(
+                  children: [
+                    Text("Eco Leaderboard", style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 5),
+                    Text("Weekly Top Heroes 🌿", style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-
-        // FLOATING PODIUM CARD
         Positioned(
-          bottom: -50,
+          bottom: -70,
           child: Container(
-            width: 340,
+            width: 350,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10)),
+                  color: Colors.green.withValues(alpha: 0.2),
+                  blurRadius: 25,
+                  offset: const Offset(0, 10),
+                ),
               ],
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (topThree.length > 1) _buildPodiumPlace(2, topThree[1], currentUid),
@@ -220,83 +220,51 @@ class ScoreboardScreen extends ConsumerWidget {
 
   Widget _buildPodiumPlace(int rank, UserModel user, String? currentUid) {
     final isMe = user.id == currentUid;
-
-    final Color color = rank == 1
-        ? Colors.amber
-        : rank == 2
-        ? Colors.grey.shade400
-        : Colors.brown.shade400;
+    final double avatarSize = rank == 1 ? 32 : 24;
+    final Color rankColor = rank == 1 ? Colors.amber : (rank == 2 ? Colors.blueGrey.shade300 : Colors.brown.shade300);
 
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (rank == 1) const Icon(Icons.emoji_events, color: Colors.amber, size: 24),
+          if (rank == 1) const Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
           CircleAvatar(
-            radius: rank == 1 ? 25 : 18,
-            backgroundColor: isMe ? Colors.green : color.withValues(alpha: 0.2),
+            radius: avatarSize,
+            backgroundColor: isMe ? Colors.green : Colors.grey[200],
             backgroundImage: user.profileurl.isNotEmpty ? NetworkImage(user.profileurl) : null,
-            child: user.profileurl.isEmpty
-                ? Text(
-              _getInitials(user.username),
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
-            )
-                : null,
+            child: user.profileurl.isEmpty ? Text(_getInitials(user.username), style: const TextStyle(fontSize: 10)) : null,
           ),
-          const SizedBox(height: 5),
-          Text(
-            user.username.split(' ')[0],
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isMe ? Colors.green[900] : Colors.black),
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            "${user.weeklyPoints}",
-            style: TextStyle(
-                fontSize: 10, fontWeight: FontWeight.bold, color: isMe ? Colors.green : color),
-          ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
+          Text(user.username.split(' ')[0], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text("${user.weeklyPoints} pts", style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(height: 10),
           Container(
-            height: rank == 1 ? 60 : (rank == 2 ? 40 : 30),
+            height: rank == 1 ? 70 : (rank == 2 ? 50 : 40),
             width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 5),
             decoration: BoxDecoration(
-                color: isMe
-                    ? Colors.green.withValues(alpha: 0.3)
-                    : color.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(5)),
-            alignment: Alignment.center,
-            child: Text(
-              "$rank",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: isMe ? Colors.green : color, fontSize: 18),
+              gradient: LinearGradient(
+                colors: [rankColor, rankColor.withValues(alpha: 0.6)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             ),
-          )
+            alignment: Alignment.center,
+            child: Text("$rank", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+          ),
         ],
       ),
     );
   }
 
   Widget _circleDeco(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
+    return Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: color));
   }
 
-  // 🌟 UPGRADED: Crash-proof initials logic
   String _getInitials(String name) {
-    final cleanName = name.trim();
-    if (cleanName.isEmpty) return "??";
-
-    final parts = cleanName.split(" ");
-    if (parts.length > 1 && parts[1].isNotEmpty) {
-      return "${parts[0][0]}${parts[1][0]}".toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
+    final parts = name.trim().split(" ");
+    if (parts.length > 1) return "${parts[0][0]}${parts[1][0]}".toUpperCase();
+    return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : "?";
   }
 }
