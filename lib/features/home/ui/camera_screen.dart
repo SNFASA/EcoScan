@@ -199,7 +199,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             ),
           ] else ...[
             // Web browsers get a safe, semi-transparent border that doesn't break HTML video
-            Container(color: Colors.black.withOpacity(0.3)),
+            Container(color: Colors.black.withValues(alpha: 0.3)),
             Center(
               child: Container(
                 width: 300, height: 300,

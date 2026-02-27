@@ -173,7 +173,7 @@ class CentersScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withOpacity(0.15),
+                  color: Colors.green.withValues(alpha: 0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -228,7 +228,7 @@ class CentersScreen extends ConsumerWidget {
                 selectedColor: Colors.green,
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                side: BorderSide(color: Colors.green.withOpacity(0.1)),
+                side: BorderSide(color: Colors.green.withValues(alpha: 0.1)),
                 labelStyle: TextStyle(
                   color: current == cat ? Colors.white : Colors.green[800],
                   fontWeight: FontWeight.bold,
@@ -257,7 +257,7 @@ class CentersScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.05),
+            color: Colors.green.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           )
@@ -275,7 +275,7 @@ class CentersScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(15)),
                   child: Column(
                     children: [

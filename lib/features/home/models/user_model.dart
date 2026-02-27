@@ -12,6 +12,7 @@ class UserModel {
   final Map<String, int> categoryCounts; 
   final double nextMilestoneCo2;
   final String lastScanWeekId;
+  final List<String> earnedBadges;
 
   UserModel({
     required this.id,
@@ -27,6 +28,7 @@ class UserModel {
     required this.categoryCounts,
     required this.nextMilestoneCo2,
     required this.lastScanWeekId,
+    required this.earnedBadges,
   });
 
   factory UserModel.fromMap(String id, Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class UserModel {
       categoryCounts: Map<String, int>.from(json['categoryCounts'] ?? {}),
       nextMilestoneCo2: (json['nextMilestoneCo2'] ?? 50.0).toDouble(),
       lastScanWeekId: json['lastScanWeekId'] ?? '',
+      earnedBadges: List<String>.from(json['earnedBadges'] ?? []),
     );
   }
 
@@ -61,6 +64,7 @@ class UserModel {
       'categoryCounts': categoryCounts,
       'nextMilestoneCo2': nextMilestoneCo2,
       'lastScanWeekId': lastScanWeekId,
+      'earnedBadges': earnedBadges,
     };
   }
 }

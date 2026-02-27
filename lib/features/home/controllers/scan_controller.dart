@@ -11,6 +11,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../models/scan_model.dart';
 import '../repositories/scan_repository.dart';
+import '../models/user_model.dart';
+import '../models/badges_model.dart';
+import 'package:ecoscan/services/badge_email_service.dart';
+
 
 final scanControllerProvider = AsyncNotifierProvider<ScanController, ScanModel?>(() {
   return ScanController();
@@ -18,6 +22,7 @@ final scanControllerProvider = AsyncNotifierProvider<ScanController, ScanModel?>
 
 class ScanController extends AsyncNotifier<ScanModel?> {
   late final GenerativeModel _model;
+  
 
   @override
   FutureOr<ScanModel?> build() async {
@@ -38,7 +43,7 @@ class ScanController extends AsyncNotifier<ScanModel?> {
     return null;
   }
 
-  Future<void> processImage(XFile image) async {
+ Future<void> processImage(XFile image) async {
     state = const AsyncLoading();
 
     try {
@@ -48,11 +53,12 @@ class ScanController extends AsyncNotifier<ScanModel?> {
         finalBytes = await image.readAsBytes();
       } else {
         finalBytes = await FlutterImageCompress.compressWithFile(
-          image.path,
-          minWidth: 800,
-          minHeight: 800,
-          quality: 70,
-        ) ?? await image.readAsBytes();
+              image.path,
+              minWidth: 800,
+              minHeight: 800,
+              quality: 70,
+            ) ??
+            await image.readAsBytes();
       }
 
       final prompt = TextPart("""
@@ -67,32 +73,39 @@ class ScanController extends AsyncNotifier<ScanModel?> {
       """);
 
       final mimeType = image.mimeType ?? 'image/jpeg';
-      final content = [Content.multi([prompt, DataPart(mimeType, finalBytes)])];
+      final content = [
+        Content.multi([prompt, DataPart(mimeType, finalBytes)])
+      ];
 
-      // 🌟 SPEED UP: We ONLY wait for Gemini now. No Storage upload!
-      final GenerateContentResponse response = await _model.generateContent(content);
+      final GenerateContentResponse response =
+          await _model.generateContent(content);
 
       final RegExp jsonRegExp = RegExp(r'\{[\s\S]*\}');
       final match = jsonRegExp.firstMatch(response.text ?? "{}");
       final jsonString = match?.group(0) ?? "{}";
       final Map<String, dynamic> data = jsonDecode(jsonString);
 
+      // 1. Create the scan object
       final scan = ScanModel(
         category: data['category'] ?? 'Unknown',
         co2Saved: (data['co2Saved'] as num?)?.toDouble() ?? 0.0,
         confidenceScore: (data['confidence'] as num?)?.toDouble() ?? 0.0,
-        imageUrl: "", // 🌟 Set to empty string since we aren't saving the photo
+        imageUrl: "", 
         pointsEarned: data['points'] as int? ?? 0,
         timestamp: Timestamp.now(),
         wasteType: data['item'] ?? 'Unknown Item',
         weekId: _generateWeekId(),
       );
 
-      // Instantly update the UI
+      // 2. Instantly update the UI
       state = AsyncData(scan);
 
-      // Save the points/details to Firestore silently
-      ref.read(scanRepositoryProvider).saveScan(scan).catchError((e) {
+      // 3. Save to Firestore and trigger badge check
+      // We do this inside the try block where 'scan' is defined
+      ref.read(scanRepositoryProvider).saveScan(scan).then((_) {
+        debugPrint("✅ Scan saved successfully. Checking badges...");
+        onScanComplete(scan); 
+      }).catchError((e) {
         debugPrint("❌ Firestore Background Error: $e");
       });
 
@@ -100,6 +113,8 @@ class ScanController extends AsyncNotifier<ScanModel?> {
       debugPrint("❌ ScanController Error: $e");
       state = AsyncError(e, stack);
     }
+    // 🌟 MOVED LOGIC: The code that was here causing the 'scan' error 
+    // is now safely inside the try block above.
   }
 
   String _generateWeekId() {
@@ -107,5 +122,23 @@ class ScanController extends AsyncNotifier<ScanModel?> {
     int dayOfYear = int.parse(now.difference(DateTime(now.year, 1, 1)).inDays.toString());
     int weekNumber = ((dayOfYear - now.weekday + 10) / 7).floor();
     return "${now.year}-W${weekNumber.toString().padLeft(2, '0')}";
+  }
+  // Example scan completion logic
+Future<void> onScanComplete(ScanModel newScan) async {
+    final String? uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // 1. Fetch latest user data and all available badges
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (!userDoc.exists) return;
+    
+    // Pass uid to fromMap as required by your UserModel
+    final user = UserModel.fromMap(uid, userDoc.data()!);
+    
+    final badgeDocs = await FirebaseFirestore.instance.collection('badges').get();
+    final allBadges = badgeDocs.docs.map((d) => BadgesModel.fromMap(d.data())).toList();
+
+    // 2. Trigger badge check using the imported service
+    BadgeEmailService.checkAndSendBadge(user, allBadges);
   }
 }
