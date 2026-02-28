@@ -87,9 +87,23 @@ flutter run
  Create a .env file (if required) and do not commit it:
 
 ```
-API_KEY=your_api_key_here
+GEMINI_API_KEY=your_api_key_here
 ```
-
+API key for Google Maps 
+```
+GOOGLE_PLACES_API_KEY=your_api_key_here
+```
+SMTP configuration
+```
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME="ecoscan"
+```
 ---
 
 ## 🧑‍💻 Contribution Guide (Issue → Pull Request Flow)
