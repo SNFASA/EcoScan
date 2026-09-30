@@ -1,206 +1,243 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+import '../../../services/points_service.dart';
+
+class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
 
+  static const _categoryDetails = <String, (Color, IconData)>{
+    'Plastic': (Colors.orange, Icons.local_drink_outlined),
+    'Paper': (Colors.blue, Icons.newspaper_outlined),
+    'Glass': (Colors.teal, Icons.wine_bar_outlined),
+    'Metal': (Colors.blueGrey, Icons.hardware_outlined),
+    'Food': (Colors.brown, Icons.compost_outlined),
+    'General': (Colors.grey, Icons.delete_outline),
+  };
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(pointsServiceProvider);
+    final entries = stats.categoryCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final largestCount = entries.isEmpty ? 1 : entries.first.value;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F9F5),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // 1. HEADER (Exact copy of Home)
-                _buildHeaderSection(),
-
-                // 2. SPACER (Exact copy of Home)
-                const SizedBox(height: 80),
-
-                // 3. CONTENT
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar.large(
+                pinned: true,
+                backgroundColor: Colors.green.shade800,
+                foregroundColor: Colors.white,
+                title: const Text('Your Impact'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
                     children: [
-                      const Text("Waste Breakdown", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      const SizedBox(height: 20),
-
-                      _buildImpactBar("Plastic", 0.7, Colors.orange, Icons.local_drink),
-                      _buildImpactBar("Paper", 0.4, Colors.blue, Icons.newspaper),
-                      _buildImpactBar("Glass", 0.2, Colors.teal, Icons.wine_bar),
-                      _buildImpactBar("General", 0.1, Colors.grey, Icons.delete_outline),
-
-                      const SizedBox(height: 30),
-
-                      // Milestone Card
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.blue.shade800, Colors.blue.shade500],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.flag_rounded, color: Colors.white, size: 40),
-                            const SizedBox(width: 20),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Next Milestone", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                                  Text("Save 20kg CO2", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                            CircularProgressIndicator(value: 0.6, color: Colors.white, backgroundColor: Colors.white24),
-                          ],
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.recycling_rounded,
+                          value: '${stats.totalScans}',
+                          label: 'Session scans',
+                          color: Colors.green,
                         ),
                       ),
-                      const SizedBox(height: 100),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.stars_rounded,
+                          value: '${stats.totalPoints}',
+                          label: 'Local points',
+                          color: Colors.amber.shade700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                sliver: const SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Waste breakdown',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Stored only for this app session.',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (entries.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _EmptyImpact(),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                  sliver: SliverList.builder(
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      final entry = entries[index];
+                      final details =
+                          _categoryDetails[entry.key] ??
+                          (Colors.grey, Icons.delete_outline);
+                      return _ImpactBar(
+                        label: entry.key,
+                        count: entry.value,
+                        proportion: entry.value / largestCount,
+                        color: details.$1,
+                        icon: details.$2,
+                      );
+                    },
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
+}
 
-  // --- EXACT HEADER MATCHING HOME SCREEN ---
-  Widget _buildHeaderSection() {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Container(
-          height: 280, // Matches Home
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
-            ),
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 30),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
           ),
-          child: Stack(
-            children: [
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
-              const Positioned(
-                top: 60,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    Text("Your Impact", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 20),
-                    Text("Total CO2 Offset", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                    SizedBox(height: 5),
-                    Text("12.5 kg", style: TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          bottom: -50, // Matches Home
-          child: Container(
-            width: 340,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                  child: const Text("🌳", style: TextStyle(fontSize: 32)),
-                ),
-                const SizedBox(width: 20),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Equivalent to", style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)),
-                      SizedBox(height: 4),
-                      Text("3 Trees Planted", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      SizedBox(height: 4),
-                      Text("Keep recycling!", style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+          Text(label, style: const TextStyle(color: Colors.black54)),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildImpactBar(String label, double percentage, Color color, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
+class _ImpactBar extends StatelessWidget {
+  const _ImpactBar({
+    required this.label,
+    required this.count,
+    required this.proportion,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final int count;
+  final double proportion;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(icon, size: 20, color: color),
-                  ),
-                  const SizedBox(width: 15),
-                  Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color),
               ),
-              Text("${(percentage * 100).toInt()}%", style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text('$count ${count == 1 ? 'item' : 'items'}'),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: percentage,
-              backgroundColor: Colors.grey[200],
+              value: proportion,
+              minHeight: 10,
               color: color,
-              minHeight: 12,
+              backgroundColor: color.withValues(alpha: 0.12),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _circleDeco(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+class _EmptyImpact extends StatelessWidget {
+  const _EmptyImpact();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.auto_graph_rounded, size: 56, color: Colors.black38),
+          SizedBox(height: 16),
+          Text(
+            'Your session is ready',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Scan an item and its category will appear here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black54),
+          ),
+        ],
+      ),
     );
   }
 }

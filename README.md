@@ -1,172 +1,86 @@
-# 🌱 EcoScan — AI Waste Sorting Gamification App
+# EcoScan
 
-EcoScan is a mobile application that helps users correctly dispose of waste by using AI-powered image recognition.  
-Users simply take a photo of an item, and EcoScan tells them **which bin to use**, while rewarding eco-friendly behavior through **points and leaderboards**.
+EcoScan is ToastTech's guest-first waste-sorting app. Point a camera at a household item and Firebase AI Logic asks Gemini to classify it, suggest a bin, and provide a short recycling tip.
 
----
+The project began at KitaHack 2026 and is now being prepared as a public Flutter/Firebase project.
 
-## 🎯 Target Sustainable Development Goals (SDGs)
-- **SDG #12** – Responsible Consumption and Production  
-- **SDG #13** – Climate Action  
+## Access model
 
----
+| Feature | Guest | Registered user |
+| --- | :---: | :---: |
+| Home | Yes | Yes |
+| AI waste scan | Yes | Yes |
+| Local session points | Yes | Yes |
+| Impact breakdown | Yes | Yes |
+| Rankings | No | Yes |
 
-## 🚨 Problem
-Incorrect waste disposal is a major environmental issue.  
-People often don’t know which bin to use, leading to **recycling contamination** and increased landfill waste.
+Rankings currently contain preview entries and the signed-in user's local session points. A shared, persistent leaderboard will require a Firestore data model and security rules; the UI calls this out rather than presenting demo values as live data.
 
----
+## Architecture
 
-## 💡 Solution
-EcoScan introduces a **“Snap & Sort”** experience:
-1. 📸 User takes a photo of waste
-2. 🤖 AI identifies the item and material
-3. 🗑️ App recommends the correct bin
-4. 🏆 User earns points for correct sorting
-5. 📊 Leaderboards motivate sustainable habits
+```text
+Flutter web/mobile
+  ├─ Firebase Authentication (email/password, Rankings only)
+  ├─ Firebase App Check (abuse protection)
+  ├─ Firebase AI Logic → Gemini Developer API (waste scans)
+  └─ Riverpod in-memory state (guest points and Impact)
 
----
-
-## ✨ Key Features (MVP)
-- Image-based waste identification
-- Clear bin recommendations
-- Confidence score for AI predictions
-- Gamified points system
-- Global leaderboard
-- Clean and intuitive UI
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Flutter** (Android & iOS)
-
-### AI
-- **Gemini Pro Vision**
-```json
-{
-  "item": "plastic bottle",
-  "bin": "recycling",
-  "confidence": 0.98
-}
+Firebase Hosting serves build/web
 ```
 
----
+The app does not contain a Gemini API key. Firebase AI Logic brokers AI calls, and App Check helps reject unauthorized clients. Firebase web configuration in `lib/firebase_options.dart` identifies the Firebase project; it is not a server secret.
 
-##  🚀 Installation & Setup
-### Prerequisite
-### Make sure you have the following installed:
-- Flutter SDK
-- Git
-- A code editor (VS Code recommended)
-- Android Emulator or physical device
+## Local development
 
-### Clone the Repository
-```
-git clone https://github.com/SNFASA/EcoScan.git
-cd EcoScan
- ````
+### Requirements
 
-### Install Dependencies
-```
-git clone https://github.com/SNFASA/EcoScan.git
-cd EcoScan
- ````
+- Flutter 3.41.1 or a compatible stable release
+- A Firebase project with a registered web app
+- A browser/device with a camera
+- Firebase CLI only if you plan to deploy
 
-### Run the App
-```
-flutter run
- ````
+### Firebase console setup
 
----
+1. In **Authentication → Sign-in method**, enable **Email/Password**.
+2. In **Firebase AI Logic**, start with the **Gemini Developer API** and enable the required API.
+3. In **App Check**, register the web app with a reCAPTCHA Enterprise provider.
+4. Add `localhost` for local testing and your Firebase Hosting domains for production.
+5. Keep budget alerts and API usage monitoring enabled even when using no-cost quotas.
 
-## 🔐 Environment Configuration (Optional)
+### Run
 
- Some features (AI scanning, leaderboard) may require environment variables.
- Create a .env file (if required) and do not commit it:
-
-```
-API_KEY=your_api_key_here
+```bash
+flutter pub get
+cp config.example.json config.local.json
+flutter run -d chrome --dart-define-from-file=config.local.json
 ```
 
----
+Replace the placeholder in `config.local.json` with the public reCAPTCHA Enterprise site key. `config.local.json` is ignored by Git. Do not add a Gemini API key, service-account JSON, passwords, or App Check debug tokens to this repository.
 
-## 🧑‍💻 Contribution Guide (Issue → Pull Request Flow)
+The camera requires HTTPS in production; `localhost` is accepted during development.
 
- We follow an issue-based development workflow to keep collaboration clean and organized.
+## Validate and build
 
-### 1️⃣ Pick or Create an Issue
-
-- Go to the **Issues** tab  
-- Choose an issue from the **Backlog / Ready**  
-- Assign the issue to yourself  
-
-### 2️⃣ Create a Feature Branch
-
-Branch naming convention:
-```
-feature/<issue-number>-short-description
+```bash
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build web --release --dart-define-from-file=config.local.json
 ```
 
-Example:
-```
-git checkout -b feature/12-camera-ui
-```
+For detailed Firebase and GitHub deployment setup, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-### 3️⃣ Work on the Issue
+## Project status
 
-- Make small, focused commits
-- Follow the project structure
-- Test before pushing  
+- Guest scanning and local Impact state are implemented.
+- Rankings are account-gated with Firebase Authentication.
+- Shared leaderboard persistence, password reset, account deletion, scan history, and recycling-centre maps are not implemented yet.
+- Bin colours are a prototype convention. Disposal guidance varies by local authority and should be verified before a public regional launch.
 
-```
-git add .
-git commit -m "Add camera UI for scanning"
-```
+## Contributing and security
 
-### 4️⃣ Push Your Branch
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md).
 
-```
-git push origin feature/12-camera-ui
-```
+## License
 
-### 5️⃣ Open a Pull Request (PR)
-
-- Open a PR targeting the develop branch
-- Link the issue using:
-
-```
-Closes #12
-```
-## ✅ PR Checklist
-
-- [ ] Code follows project structure
-- [ ] Feature matches issue description
-- [ ] No unnecessary files committed
-- [ ] App runs without errors
-
-## 6️⃣ Review & Merge
-
-- Admin reviews the PR
-- Requested changes (if any) are applied
-- PR is merged into **develop**
-- Completed issues are moved to **Done**
-
-## 🌳 Branch Rules
-
-- ❌ No direct commits to `main`
-- ✅ All changes via Pull Requests
-- ✅ Admin approval required before merge
-
----
-
-## 🏁 Development Workflow Summary
-
-```
-Issue → Branch → Code → Pull Request → Review → Merge
-```
-### This keeps the project:
-- Organized
-- Easy to review
-- Professional for hackathon judges
+EcoScan is licensed under the [GNU General Public License v3.0](LICENSE). Derivative distributions must comply with the GPL's source-sharing requirements.

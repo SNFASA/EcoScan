@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,12 +12,14 @@ class CameraScreen extends ConsumerStatefulWidget {
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerProviderStateMixin {
+class _CameraScreenState extends ConsumerState<CameraScreen>
+    with SingleTickerProviderStateMixin {
   CameraController? controller;
   List<CameraDescription>? _cameras;
   bool isCameraInitialized = false;
   bool isAnalyzing = false;
   bool isFlashOn = false;
+  String? _cameraError;
 
   late AnimationController _scanController;
 
@@ -37,13 +38,25 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     try {
       _cameras = await availableCameras();
       if (_cameras != null && _cameras!.isNotEmpty) {
-        controller = CameraController(_cameras![0], ResolutionPreset.high, enableAudio: false);
+        controller = CameraController(
+          _cameras![0],
+          ResolutionPreset.medium,
+          enableAudio: false,
+        );
         await controller!.initialize();
         if (!mounted) return;
         setState(() => isCameraInitialized = true);
+      } else if (mounted) {
+        setState(() => _cameraError = 'No camera was found on this device.');
       }
     } catch (e) {
       debugPrint("Camera Error: $e");
+      if (mounted) {
+        setState(() {
+          _cameraError =
+              'EcoScan could not access the camera. Allow camera permission and try again.';
+        });
+      }
     }
   }
 
@@ -51,7 +64,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (controller == null) return;
     try {
       isFlashOn = !isFlashOn;
-      await controller!.setFlashMode(isFlashOn ? FlashMode.torch : FlashMode.off);
+      await controller!.setFlashMode(
+        isFlashOn ? FlashMode.torch : FlashMode.off,
+      );
       setState(() {});
     } catch (e) {
       debugPrint("Flash Error: $e");
@@ -61,34 +76,45 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void dispose() {
     _scanController.dispose();
-    controller?.setFlashMode(FlashMode.off);
     controller?.dispose();
     super.dispose();
   }
 
   Future<void> _takePicture() async {
-    if (controller == null || !controller!.value.isInitialized || isAnalyzing) return;
+    if (controller == null || !controller!.value.isInitialized || isAnalyzing) {
+      return;
+    }
     setState(() => isAnalyzing = true);
 
     try {
       final XFile image = await controller!.takePicture();
-      File file = File(image.path);
+      final imageBytes = await image.readAsBytes();
+      if (imageBytes.lengthInBytes > 10 * 1024 * 1024) {
+        throw const WasteAnalysisException(
+          'That image is too large. Please move closer and try again.',
+        );
+      }
 
-      final data = await GeminiService.identifyWaste(file);
+      final data = await GeminiService.identifyWaste(
+        imageBytes: imageBytes,
+        mimeType: image.mimeType ?? 'image/jpeg',
+      );
 
       if (!mounted) return;
 
-      final pointsEarned = data['points'] ?? 0;
-      ref.read(pointsServiceProvider.notifier).addPoints(pointsEarned);
+      final pointsEarned = (data['points'] as num?)?.toInt() ?? 0;
+      final category = data['category']?.toString() ?? 'General';
+      ref
+          .read(pointsServiceProvider.notifier)
+          .recordScan(points: pointsEarned, category: category);
 
       setState(() => isAnalyzing = false);
 
-      // ⚠️ FIXED: Solid White Background & Dark Barrier
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.white, // Solid white (Not transparent)
-        barrierColor: Colors.black87,  // Darkens the background significantly
+        backgroundColor: Colors.white,
+        barrierColor: Colors.black87,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
@@ -100,13 +126,58 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       setState(() => isAnalyzing = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+        SnackBar(
+          content: Text(
+            e is WasteAnalysisException
+                ? e.message
+                : 'The scan failed. Please try again.',
+          ),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_cameraError != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.no_photography_outlined,
+                    color: Colors.white,
+                    size: 56,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _cameraError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () {
+                      setState(() => _cameraError = null);
+                      _setupCamera();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!isCameraInitialized) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -121,10 +192,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         children: [
           CameraPreview(controller!),
 
-          // Focus Overlay
           ColorFiltered(
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.5),
+              Colors.black.withValues(alpha: 0.5),
               BlendMode.srcOut,
             ),
             child: Stack(
@@ -149,7 +219,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             ),
           ),
 
-          // Laser Animation
           if (!isAnalyzing)
             Center(
               child: SizedBox(
@@ -169,13 +238,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.green.withOpacity(0),
+                                  Colors.green.withValues(alpha: 0),
                                   Colors.green,
-                                  Colors.green.withOpacity(0),
+                                  Colors.green.withValues(alpha: 0),
                                 ],
                               ),
                               boxShadow: [
-                                BoxShadow(color: Colors.green.withOpacity(0.6), blurRadius: 10, spreadRadius: 2)
+                                BoxShadow(
+                                  color: Colors.green.withValues(alpha: 0.6),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
                               ],
                             ),
                           ),
@@ -187,45 +260,58 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               ),
             ),
 
-          // Corner Guides
           Center(
             child: Container(
               width: 320,
               height: 320,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_corner(), _corner(angle: 90)]),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_corner(angle: 270), _corner(angle: 180)]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [_corner(), _corner(angle: 90)],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [_corner(angle: 270), _corner(angle: 180)],
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Analyzing Loader
           if (isAnalyzing)
             Container(
-              color: Colors.black87, // Darker background for loading
+              color: Colors.black87,
               child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.green, strokeWidth: 5),
+                    CircularProgressIndicator(
+                      color: Colors.green,
+                      strokeWidth: 5,
+                    ),
                     SizedBox(height: 20),
                     Text(
                       "Identifying Waste...",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
 
-          // Control Panel
           Positioned(
             bottom: 0,
             left: 0,
@@ -233,7 +319,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
               decoration: const BoxDecoration(
-                color: Colors.black87, // Darker control panel
+                color: Colors.black87,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: Column(
@@ -279,9 +365,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                       ),
                       IconButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gallery coming soon!")));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Gallery coming soon!"),
+                            ),
+                          );
                         },
-                        icon: const Icon(Icons.photo_library, color: Colors.white, size: 30),
+                        icon: const Icon(
+                          Icons.photo_library,
+                          color: Colors.white,
+                          size: 30,
+                        ),
                       ),
                     ],
                   ),
