@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_provider.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
+import '../../../services/firebase_service.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository repository;
@@ -19,20 +20,31 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      await repository.login(email, password);
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-      // Reset state after success
+      // 🔥 CREATE USER DOCUMENT IF NOT EXIST
+      final user = credential.user;
+      if (user != null) {
+        await FirebaseService().createUserIfNotExists(user);
+      } else {
+        throw Exception("Login success but user is null");
+      }
+
       state = const AuthState();
     } on FirebaseAuthException catch (e) {
+      final errorMessage = _mapFirebaseError(e);
       state = state.copyWith(
         isLoading: false,
-        error: _mapFirebaseError(e),
+        error: errorMessage,
       );
+      throw Exception(errorMessage); // 🌟 ADDED: Throw it back to the UI!
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: "Something went wrong",
+        error: e.toString(),
       );
+      throw Exception(e.toString()); // 🌟 ADDED: Throw it back to the UI!
     }
   }
 
@@ -41,27 +53,50 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      await repository.register(email, password);
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      // 🔥 CREATE USER DOCUMENT
+      final user = credential.user;
+      if (user != null) {
+        await FirebaseService().createUserIfNotExists(user);
+      } else {
+        throw Exception("Register success but user is null");
+      }
+
       state = const AuthState();
     } on FirebaseAuthException catch (e) {
+      final errorMessage = _mapFirebaseError(e);
       state = state.copyWith(
         isLoading: false,
-        error: _mapFirebaseError(e),
+        error: errorMessage,
       );
+      throw Exception(errorMessage); // 🌟 ADDED: Throw it back to the UI!
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: "Something went wrong",
+        error: e.toString(),
       );
+      throw Exception(e.toString()); // 🌟 ADDED: Throw it back to the UI!
     }
   }
 
   /// LOGOUT
   Future<void> logout() async {
-    await repository.logout();
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      await FirebaseAuth.instance.signOut();
+      state = const AuthState();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      throw Exception(e.toString()); // Keep consistent error handling
+    }
   }
 
-  /// Better Firebase error mapping
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
@@ -74,6 +109,9 @@ class AuthNotifier extends Notifier<AuthState> {
         return 'Email already registered.';
       case 'weak-password':
         return 'Password is too weak.';
+    // Note: Firebase updated their errors. 'invalid-credential' is often thrown now instead of wrong-password
+      case 'invalid-credential':
+        return 'Incorrect email or password.';
       default:
         return e.message ?? 'Authentication error.';
     }

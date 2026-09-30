@@ -17,40 +17,40 @@ People often don’t know which bin to use, leading to **recycling contamination
 
 ---
 
-## 💡 Solution
-EcoScan introduces a **“Snap & Sort”** experience:
-1. 📸 User takes a photo of waste
-2. 🤖 AI identifies the item and material
-3. 🗑️ App recommends the correct bin
-4. 🏆 User earns points for correct sorting
-5. 📊 Leaderboards motivate sustainable habits
+## ✨ Features
+
+- 📸 **Snap & Sort** – Take a photo of waste and get instant bin recommendations  
+- 🧠 **AI Waste Classification** – Powered by Gemini Pro Vision  
+- 🎮 **Gamification** – Earn points and unlock achievements  
+- 🏆 **Global Leaderboard** – Compete with users worldwide  
+- 🗺️ **Recycling Center Locator** – Find nearby recycling facilities  
 
 ---
 
-## ✨ Key Features (MVP)
-- Image-based waste identification
-- Clear bin recommendations
-- Confidence score for AI predictions
-- Gamified points system
-- Global leaderboard
-- Clean and intuitive UI
+## 🏗️ Architecture Overview
+
+- **Frontend:** Built with Flutter, utilizing Riverpod (v3.2.1) for scalable state management and dependency injection.
+- **Authentication:** Managed via Firebase Auth with support for Google Sign-In.
+- **Backend:** Stores user profiles, points, and global leaderboard data.
+- **Storage:** Handles temporary or permanent storage of waste images for verification.
+- **AI Engine:** via the google_generative_ai package, processing images directly from the device to identify materials and bin types.
+- **Maps:** Google Maps SDK integrated with geolocator to help users find the nearest recycling centers.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **Flutter** (Android & iOS)
+| Layer | Technology |
+|------|-----------|
+| Mobile | Flutter |
+| State Management | Riverpod |
+| Auth | Firebase Auth |
+| Database | Cloud Firestore |
+| Storage | Firebase Storage |
+| AI | Gemini 2.5 Vision |
+| Maps | Google Maps SDK |
 
-### AI
-- **Gemini Pro Vision**
-```json
-{
-  "item": "plastic bottle",
-  "bin": "recycling",
-  "confidence": 0.98
-}
-```
+---
 
 ---
 
@@ -85,88 +85,53 @@ flutter run
 
  Some features (AI scanning, leaderboard) may require environment variables.
  Create a .env file (if required) and do not commit it:
+### 1. Firebase Configuration
+  Instead of committing sensitive files, generate your own configuration:
+  1. Create a project on the Firebase Console.
+  2. Run flutterfire configure to generate lib/firebase_options.dart.
+  3. Download google-services.json (Android) and GoogleService-Info.plist (iOS) and place them       in their respective app and Runner folders.
+### 2. Web & Maps Setup (web/index.html)
+If running on the web, add your API key placeholder in the <head> section:
+```
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+ ```
 
+### Gemini API
 ```
-API_KEY=your_api_key_here
+GEMINI_API_KEY=your_api_key_here
 ```
+### Google Maps API
+```
+GOOGLE_PLACES_API_KEY=your_api_key_here
+```
+ ### SMTP configuration
+```
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME="ecoscan"
+```
+---
+
+## 🗺️ Future Roadmap 
+[ ] Multi-Object Detection: Update the AI pipeline to identify and sort multiple waste items in a single camera frame.
+
+[ ] Municipal Integration: Sync with local government waste schedules to provide real-time "pickup day" notifications.
+
+[ ] Offline Mode: Implement a lightweight on-device TFLite model for basic sorting when internet access is unavailable.
+
+[ ] AR Bin Overlay: Use Augmented Reality to project the correct bin type directly over the item in the camera view.
 
 ---
 
-## 🧑‍💻 Contribution Guide (Issue → Pull Request Flow)
+## 🚧 Challenges Faced 
+1. API Latency & Cost: Calling high-level LLMs for every scan introduces latency and operational costs. We implemented image compression and are investigating local caching for common items to minimize unnecessary API calls.
+2. Prompt Engineering: Ensuring the AI consistently returns valid JSON format (without markdown backticks) required rigorous prompt iteration and validation logic.
+3. Environmental Factors: Initial tests showed that low lighting or "busy" backgrounds reduced AI confidence. We implemented a Confidence Score UI to inform users when a better photo is needed.
+4. State Synchronization: Keeping the global leaderboard in sync across multiple devices while maintaining low read counts in Firestore to optimize performance and cost.
 
- We follow an issue-based development workflow to keep collaboration clean and organized.
 
-### 1️⃣ Pick or Create an Issue
-
-- Go to the **Issues** tab  
-- Choose an issue from the **Backlog / Ready**  
-- Assign the issue to yourself  
-
-### 2️⃣ Create a Feature Branch
-
-Branch naming convention:
-```
-feature/<issue-number>-short-description
-```
-
-Example:
-```
-git checkout -b feature/12-camera-ui
-```
-
-### 3️⃣ Work on the Issue
-
-- Make small, focused commits
-- Follow the project structure
-- Test before pushing  
-
-```
-git add .
-git commit -m "Add camera UI for scanning"
-```
-
-### 4️⃣ Push Your Branch
-
-```
-git push origin feature/12-camera-ui
-```
-
-### 5️⃣ Open a Pull Request (PR)
-
-- Open a PR targeting the develop branch
-- Link the issue using:
-
-```
-Closes #12
-```
-## ✅ PR Checklist
-
-- [ ] Code follows project structure
-- [ ] Feature matches issue description
-- [ ] No unnecessary files committed
-- [ ] App runs without errors
-
-## 6️⃣ Review & Merge
-
-- Admin reviews the PR
-- Requested changes (if any) are applied
-- PR is merged into **develop**
-- Completed issues are moved to **Done**
-
-## 🌳 Branch Rules
-
-- ❌ No direct commits to `main`
-- ✅ All changes via Pull Requests
-- ✅ Admin approval required before merge
-
----
-
-## 🏁 Development Workflow Summary
-
-```
-Issue → Branch → Code → Pull Request → Review → Merge
-```
-### This keeps the project:
-- Organized
-- Easy to review
-- Professional for hackathon judges

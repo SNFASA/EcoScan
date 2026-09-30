@@ -90,7 +90,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10)),
                         ],
                       ),
                       child: Padding(
@@ -213,8 +213,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           child: Stack(
             children: [
-              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withOpacity(0.1))),
-              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withOpacity(0.05))),
+              Positioned(top: -50, right: -50, child: _circleDeco(150, Colors.white.withValues(alpha: 0.1))),
+              Positioned(top: 50, left: -20, child: _circleDeco(100, Colors.white.withValues(alpha: 0.05))),
               const Positioned(
                 top: 80,
                 left: 30,
@@ -240,7 +240,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       labelText: label,
       prefixIcon: Icon(icon, color: Colors.green[700]),
       filled: true,
-      fillColor: Colors.green.withOpacity(0.05),
+      fillColor: Colors.green.withValues(alpha: 0.05),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.green, width: 2)),

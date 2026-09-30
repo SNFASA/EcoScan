@@ -1,68 +1,73 @@
 import 'dart:convert';
-import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Ensure you call dotenv.load() in main.dart
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  static Future<Map<String, dynamic>> identifyWaste(File imageFile) async {
-    // Get API key securely
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-    if (apiKey.isEmpty) {
-      throw Exception('API key not found in .env file');
+  static Future<Map<String, dynamic>> identifyWaste(Uint8List imageBytes) async {
+    // 🌟 FIX: Securely load the API key from .env
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? "";
+
+    if (apiKey.isEmpty || apiKey.length < 20) {
+      debugPrint("❌ ERROR: Invalid API Key! Ensure GEMINI_API_KEY is set in your .env file.");
+      throw Exception('API key not found or invalid');
     }
 
-    // Configure Gemini model with enforced JSON response
+    // 🌟 FIX: Corrected model name and forced pure JSON output
     final model = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.5-flash',
       apiKey: apiKey,
       generationConfig: GenerationConfig(
-        responseMimeType: 'application/json',
+        responseMimeType: 'application/json', // 👈 Forces Gemini to return pure JSON, no markdown
       ),
     );
 
-    // Prompt tuned for waste classification (Malaysia context)
     final prompt = TextPart("""
-Analyze this image and identify the waste item.
-Return a RAW JSON object with these exact fields:
+Analyze this image and identify the main waste item.
+Return a JSON object with these exact fields:
 {
   "itemName": "Short name (e.g. Plastic Bottle)",
   "category": "Plastic, Paper, Glass, Metal, Food, or General",
-  "binColor": "Blue (Paper), Orange (Plastic/Metal), Brown (Glass), or Black (General)",
-  "isRecyclable": true or false,
-  "points": 10 if recyclable, 2 if not,
+  "binColor": "Blue, Orange, Brown, or Black",
+  "isRecyclable": true,
+  "points": 10,
   "funFact": "One short interesting fact about recycling this item."
 }
-Do not use Markdown. Return only the JSON.
 """);
 
     try {
-      final imageBytes = await imageFile.readAsBytes();
+      debugPrint("🚀 Sending image to Gemini 1.5 Flash...");
+
+      // Uint8List is perfectly handled here
       final imagePart = DataPart('image/jpeg', imageBytes);
 
       final response = await model.generateContent([
         Content.multi([prompt, imagePart]),
       ]);
 
-      debugPrint('Gemini response: $response');
+      debugPrint('✅ Raw Gemini response: ${response.text}');
 
       if (response.text == null || response.text!.isEmpty) {
         throw Exception('No response text from Gemini');
       }
 
-      // Clean up in case Gemini wraps JSON in ```json fences
-      final cleanJson = response.text!
-          .replaceAll('```json', '')
-          .replaceAll('```', '')
-          .trim();
+      // 🛡️ Even with responseMimeType, keeping Regex is a great bulletproof fallback
+      // in case the model wraps the JSON in markdown blocks (```json ... ```)
+      final RegExp jsonRegExp = RegExp(r'\{[\s\S]*\}');
+      final match = jsonRegExp.firstMatch(response.text!);
 
-      return jsonDecode(cleanJson) as Map<String, dynamic>;
-    } catch (e, stackTrace) {
-      debugPrint('Gemini error: $e');
-      debugPrint('Stack trace: $stackTrace');
+      if (match != null) {
+        final cleanJson = match.group(0)!;
+        return jsonDecode(cleanJson) as Map<String, dynamic>;
+      } else {
+        throw Exception('Could not find JSON in response');
+      }
 
-      // Safe fallback so the app never crashes
+    } catch (e) {
+      debugPrint('❌ Gemini error: $e');
+
+      // Graceful fallback so the UI doesn't crash
       return {
         "itemName": "Unknown Item",
         "category": "General",

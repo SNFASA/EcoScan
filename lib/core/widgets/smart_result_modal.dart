@@ -37,7 +37,7 @@ class SmartResultModal extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: themeColor.withOpacity(0.1),
+              color: themeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: themeColor, width: 2),
             ),
