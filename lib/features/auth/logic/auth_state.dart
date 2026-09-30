@@ -1,19 +1,13 @@
 class AuthState {
+  const AuthState({this.isLoading = false, this.errorMessage});
+
   final bool isLoading;
-  final String? error;
+  final String? errorMessage;
 
-  const AuthState({
-    this.isLoading = false,
-    this.error,
-  });
-
-  AuthState copyWith({
-    bool? isLoading,
-    String? error,
-  }) {
+  AuthState copyWith({bool? isLoading, String? errorMessage}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      errorMessage: errorMessage,
     );
   }
 }

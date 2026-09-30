@@ -1,54 +1,28 @@
 name: ecoscan
-description: "A new Flutter project."
+description: "A guest-first AI waste sorting web application by ToastTech."
 publish_to: "none"
 
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.9.0 <4.0.0" # 🟢 FIXED: Lowered requirement to match your PC
-version: 1.0.0+1
-
-environment:
-  sdk: '>=3.10.3 <4.0.0'
+  sdk: ">=3.10.3 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  flutter_dotenv: ^5.2.1
-  flutter_riverpod: ^3.2.1
-  firebase_core: ^4.4.0
-  firebase_auth: ^6.1.4
-  cloud_firestore: ^6.1.2
-  google_sign_in: ^6.2.1
-  flutter_image_compress: ^1.1.0
+  flutter_riverpod: ^3.3.2
+  firebase_ai: ^4.0.0
+  firebase_app_check: ^0.4.8
+  firebase_auth: ^6.2.0
+  firebase_core: ^4.3.0
   cupertino_icons: ^1.0.8
   camera: ^0.11.3+1
-  google_generative_ai: ^0.4.7
-  path_provider: ^2.1.5
-  path: ^1.9.1
-  permission_handler: ^12.0.1
-  image_picker: ^1.1.1
-  intl: ^0.20.2
-  google_maps_flutter: ^2.14.2
-  geolocator: ^14.0.2
-  custom_info_window: ^1.0.1
-  url_launcher: ^6.3.2
-  firebase_storage: ^13.0.6
-  latlong2: ^0.9.1
-  firebase_analytics: ^12.1.2
-  mailer: ^6.1.0
-
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0 # adjusted to be safe for older SDKs
   flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
-
-  # 🟢 FIXED: Registered your .env file here
-  assets:
-    - .env

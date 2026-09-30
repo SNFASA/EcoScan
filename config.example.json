@@ -1,0 +1,4 @@
+{
+  "RECAPTCHA_ENTERPRISE_SITE_KEY": "replace-with-your-public-web-site-key",
+  "GEMINI_MODEL": "gemini-3.8-flash"
+}
